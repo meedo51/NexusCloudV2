@@ -23,8 +23,8 @@ export default function ShareDialog({ fileId, fileName, onClose }: ShareDialogPr
       const url = `${window.location.origin}/s/${res.token}`;
       setShareUrl(url);
       toast.success('Share link created!');
-    } catch {
-      toast.error('Failed to create share link');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to create share link');
     }
     setLoading(false);
   };

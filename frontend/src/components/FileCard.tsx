@@ -125,7 +125,6 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
         { id: 'rename', label: 'Rename', icon: <FiEdit2 size={14} />, shortcut: 'F2', onClick: () => { setNewName(file.originalName || file.name); setIsRenaming(true); } },
         { id: 'download-zip', label: 'Download as ZIP', icon: <FiArchive size={14} />, onClick: handleDownloadZip },
         { id: 'move', label: 'Move to...', icon: <FiMove size={14} />, onClick: () => setShowMove(true) },
-        { id: 'share', label: 'Share', icon: <FiShare2 size={14} />, onClick: () => setShowShare(true) },
         { id: 'divider-1', label: '', icon: <></>, divider: true, onClick: () => {} },
         { id: 'details', label: 'Details', icon: <FiInfo size={14} />, onClick: () => setShowDetails(true) },
         { id: 'divider-2', label: '', icon: <></>, divider: true, onClick: () => {} },
@@ -194,9 +193,11 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
                 <FiDownload size={16} />
               </button>
             )}
-            <button onClick={() => setShowShare(true)} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Share">
-              <FiShare2 size={16} />
-            </button>
+            {!file.isFolder && (
+              <button onClick={() => setShowShare(true)} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Share">
+                <FiShare2 size={16} />
+              </button>
+            )}
             <button onClick={() => { setShowMove(true); }} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Move">
               <FiMove size={16} />
             </button>
