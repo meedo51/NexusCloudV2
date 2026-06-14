@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiFile, FiFolder, FiImage, FiFileText, FiDownload,
-  FiTrash2, FiEdit2, FiShare2, FiMoreVertical,
+  FiTrash2, FiEdit2, FiShare2, FiInfo, FiMove, FiEye,
+  FiArchive, FiChevronRight,
 } from 'react-icons/fi';
 import { FileItem } from '../types';
 import { filesApi } from '../services/api';
 import toast from 'react-hot-toast';
+import ContextMenu, { MenuItem } from './ContextMenu';
 import ShareDialog from './ShareDialog';
 import FilePreview from './FilePreview';
+import MoveDialog from './MoveDialog';
+import DetailsDialog from './DetailsDialog';
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -39,12 +43,14 @@ interface FileCardProps {
 }
 
 export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCardProps) {
-  const [showMenu, setShowMenu] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showMove, setShowMove] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(file.originalName || file.name);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const Icon = getFileIcon(file.mimeType);
   const isImage = file.mimeType.startsWith('image/');
@@ -59,7 +65,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
     }
     try {
       await filesApi.rename(file.id, newName.trim());
-      toast.success('Renamed successfully');
+      toast.success('Renamed');
       setIsRenaming(false);
       onRefresh();
     } catch {
@@ -71,7 +77,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
     setIsDeleting(true);
     try {
       await filesApi.delete(file.id);
-      toast.success('Deleted successfully');
+      toast.success('Deleted');
       onRefresh();
     } catch {
       toast.error('Failed to delete');
@@ -89,8 +95,56 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error('Failed to download');
+      toast.error('Download failed');
     }
+  };
+
+  const handleDownloadZip = async () => {
+    try {
+      const blob = await filesApi.downloadZip(file.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${file.name}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Folder downloaded as zip');
+    } catch {
+      toast.error('Failed to create zip');
+    }
+  };
+
+  const onContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const menuItems: MenuItem[] = file.isFolder
+    ? [
+        { id: 'rename', label: 'Rename', icon: <FiEdit2 size={14} />, shortcut: 'F2', onClick: () => { setNewName(file.originalName || file.name); setIsRenaming(true); } },
+        { id: 'download-zip', label: 'Download as ZIP', icon: <FiArchive size={14} />, onClick: handleDownloadZip },
+        { id: 'move', label: 'Move to...', icon: <FiMove size={14} />, onClick: () => setShowMove(true) },
+        { id: 'share', label: 'Share', icon: <FiShare2 size={14} />, onClick: () => setShowShare(true) },
+        { id: 'divider-1', label: '', icon: <></>, divider: true, onClick: () => {} },
+        { id: 'details', label: 'Details', icon: <FiInfo size={14} />, onClick: () => setShowDetails(true) },
+        { id: 'divider-2', label: '', icon: <></>, divider: true, onClick: () => {} },
+        { id: 'delete', label: 'Delete', icon: <FiTrash2 size={14} />, danger: true, onClick: handleDelete },
+      ]
+    : [
+        { id: 'preview', label: 'Preview', icon: <FiEye size={14} />, shortcut: 'Space', onClick: () => setShowPreview(true) },
+        { id: 'download', label: 'Download', icon: <FiDownload size={14} />, onClick: handleDownload },
+        { id: 'rename', label: 'Rename', icon: <FiEdit2 size={14} />, shortcut: 'F2', onClick: () => { setNewName(file.originalName || file.name); setIsRenaming(true); } },
+        { id: 'move', label: 'Move to...', icon: <FiMove size={14} />, onClick: () => setShowMove(true) },
+        { id: 'share', label: 'Share', icon: <FiShare2 size={14} />, onClick: () => setShowShare(true) },
+        { id: 'divider-1', label: '', icon: <></>, divider: true, onClick: () => {} },
+        { id: 'details', label: 'Details', icon: <FiInfo size={14} />, onClick: () => setShowDetails(true) },
+        { id: 'divider-2', label: '', icon: <></>, divider: true, onClick: () => {} },
+        { id: 'delete', label: 'Delete', icon: <FiTrash2 size={14} />, danger: true, onClick: handleDelete },
+      ];
+
+  const handleClick = () => {
+    if (file.isFolder) onClick();
   };
 
   if (viewMode === 'list') {
@@ -100,8 +154,9 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
           layout
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          className="glass-card rounded-xl px-4 py-3 flex items-center gap-4 group cursor-pointer"
-          onClick={onClick}
+          className="glass-card rounded-xl px-4 py-3 flex items-center gap-4 group cursor-pointer select-none"
+          onClick={handleClick}
+          onContextMenu={onContextMenu}
         >
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
             ${file.isFolder ? 'bg-cyan/10 text-cyan' : isImage ? 'bg-coral/10 text-coral' : 'bg-white/5 text-white/60'}`}>
@@ -130,26 +185,34 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
             </p>
           </div>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-            {!file.isFolder && (
-              <button onClick={handleDownload} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors">
+            {file.isFolder ? (
+              <button onClick={handleDownloadZip} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Download as ZIP">
+                <FiArchive size={16} />
+              </button>
+            ) : (
+              <button onClick={handleDownload} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Download">
                 <FiDownload size={16} />
               </button>
             )}
-            {!file.isFolder && (
-              <button onClick={() => setShowShare(true)} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors">
-                <FiShare2 size={16} />
-              </button>
-            )}
-            <button onClick={() => { setIsRenaming(true); setNewName(file.originalName || file.name); }} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors">
+            <button onClick={() => setShowShare(true)} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Share">
+              <FiShare2 size={16} />
+            </button>
+            <button onClick={() => { setShowMove(true); }} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Move">
+              <FiMove size={16} />
+            </button>
+            <button onClick={() => { setIsRenaming(true); setNewName(file.originalName || file.name); }} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Rename">
               <FiEdit2 size={16} />
             </button>
-            <button onClick={handleDelete} disabled={isDeleting} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-coral transition-colors">
+            <button onClick={handleDelete} disabled={isDeleting} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-coral transition-colors" title="Delete">
               <FiTrash2 size={16} />
             </button>
           </div>
         </motion.div>
         {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} onClose={() => setShowShare(false)} />}
         {showPreview && <FilePreview file={file} onClose={() => setShowPreview(false)} />}
+        {showMove && <MoveDialog fileId={file.id} fileName={file.originalName || file.name} currentFolderId={file.folderId} onClose={() => setShowMove(false)} onMoved={onRefresh} />}
+        {showDetails && <DetailsDialog fileId={file.id} onClose={() => setShowDetails(false)} />}
+        {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
       </>
     );
   }
@@ -161,8 +224,9 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         whileHover={{ y: -4 }}
-        className="glass-card rounded-2xl overflow-hidden group cursor-pointer"
-        onClick={onClick}
+        className="glass-card rounded-2xl overflow-hidden group cursor-pointer select-none"
+        onClick={handleClick}
+        onContextMenu={onContextMenu}
       >
         <div className={`relative aspect-[4/3] flex items-center justify-center
           ${file.isFolder ? 'bg-cyan/5' : isImage ? 'bg-space' : 'bg-white/5'}`}>
@@ -173,12 +237,19 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
           )}
 
           <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-            {!file.isFolder && (
-              <button onClick={() => setShowShare(true)} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors">
-                <FiShare2 size={14} />
+            {file.isFolder ? (
+              <button onClick={handleDownloadZip} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Download as ZIP">
+                <FiArchive size={14} />
+              </button>
+            ) : (
+              <button onClick={handleDownload} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Download">
+                <FiDownload size={14} />
               </button>
             )}
-            <button onClick={handleDelete} disabled={isDeleting} className="p-2 rounded-lg bg-space/80 hover:bg-space text-coral/80 hover:text-coral transition-colors">
+            <button onClick={() => setShowShare(true)} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Share">
+              <FiShare2 size={14} />
+            </button>
+            <button onClick={handleDelete} disabled={isDeleting} className="p-2 rounded-lg bg-space/80 hover:bg-space text-coral/80 hover:text-coral transition-colors" title="Delete">
               <FiTrash2 size={14} />
             </button>
           </div>
@@ -208,6 +279,9 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
       </motion.div>
       {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} onClose={() => setShowShare(false)} />}
       {showPreview && <FilePreview file={file} onClose={() => setShowPreview(false)} />}
+      {showMove && <MoveDialog fileId={file.id} fileName={file.originalName || file.name} currentFolderId={file.folderId} onClose={() => setShowMove(false)} onMoved={onRefresh} />}
+      {showDetails && <DetailsDialog fileId={file.id} onClose={() => setShowDetails(false)} />}
+      {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
     </>
   );
 }

@@ -60,8 +60,14 @@ export const filesApi = {
     api.put<FileItem>(`/files/${id}/move`, { folderId }).then(r => r.data),
   download: (id: string) =>
     api.get(`/files/${id}/download`, { responseType: 'blob' }).then(r => r.data),
+  downloadZip: (id: string) =>
+    api.get(`/files/${id}/download-zip`, { responseType: 'blob' }).then(r => r.data),
   preview: (id: string) =>
     api.get(`/files/${id}/preview`).then(r => r.data),
+  details: (id: string) =>
+    api.get(`/files/${id}/details`).then(r => r.data),
+  allFolders: () =>
+    api.get('/files/all-folders').then(r => r.data),
 };
 
 const publicApi = axios.create({

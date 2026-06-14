@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
+import archiver from 'archiver';
 import db from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { upload, UPLOAD_DIR_PATH } from '../middleware/upload';
@@ -43,6 +44,14 @@ router.get('/', (req: Request, res: Response) => {
 
   const files = db.prepare(sql).all(...params);
   res.json(files);
+});
+
+router.get('/all-folders', (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const folders = db.prepare(
+    'SELECT id, name, folderId as parentId FROM files WHERE userId = ? AND isFolder = 1 ORDER BY name'
+  ).all(userId);
+  res.json(folders);
 });
 
 router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
@@ -184,6 +193,53 @@ router.get('/:id/download', (req: Request, res: Response) => {
   res.download(file.path, file.originalName);
 });
 
+router.get('/:id/download-zip', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user!.userId;
+
+  const folder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ?')
+    .get(id, userId, 1) as FileEntry | undefined;
+
+  if (!folder) {
+    res.status(404).json({ error: 'Folder not found' });
+    return;
+  }
+
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${folder.name}.zip"`);
+
+  archive.pipe(res);
+
+  const addFilesToArchive = (folderId: string, archivePath: string) => {
+    const entries = db.prepare(
+      'SELECT * FROM files WHERE folderId = ? AND userId = ?'
+    ).all(folderId, userId) as FileEntry[];
+
+    for (const entry of entries) {
+      if (entry.isFolder) {
+        addFilesToArchive(entry.id, path.join(archivePath, entry.name));
+      } else if (fs.existsSync(entry.path)) {
+        archive.file(entry.path, { name: path.join(archivePath, entry.originalName) });
+      }
+    }
+  };
+
+  const rootEntries = db.prepare(
+    'SELECT * FROM files WHERE folderId = ? AND userId = ?'
+  ).all(id, userId) as FileEntry[];
+
+  for (const entry of rootEntries) {
+    if (entry.isFolder) {
+      addFilesToArchive(entry.id, entry.name);
+    } else if (fs.existsSync(entry.path)) {
+      archive.file(entry.path, { name: entry.originalName });
+    }
+  }
+
+  archive.finalize();
+});
+
 router.get('/:id/preview', (req: Request, res: Response) => {
   const { id } = req.params;
   const userId = req.user!.userId;
@@ -232,6 +288,10 @@ router.put('/:id/move', (req: Request, res: Response) => {
   }
 
   if (folderId) {
+    if (folderId === id) {
+      res.status(400).json({ error: 'Cannot move into itself' });
+      return;
+    }
     const targetFolder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ?')
       .get(folderId, userId, 1);
     if (!targetFolder) {
@@ -246,6 +306,28 @@ router.put('/:id/move', (req: Request, res: Response) => {
 
   const updated = db.prepare('SELECT * FROM files WHERE id = ?').get(id);
   res.json(updated);
+});
+
+router.get('/:id/details', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user!.userId;
+
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  if (!file) {
+    res.status(404).json({ error: 'File or folder not found' });
+    return;
+  }
+
+  let itemCount = 0;
+  if (file.isFolder) {
+    const result = db.prepare('SELECT COUNT(*) as count FROM files WHERE folderId = ?').get(id) as any;
+    itemCount = result.count;
+  }
+
+  res.json({
+    ...file,
+    itemCount,
+  });
 });
 
 export default router;
