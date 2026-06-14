@@ -30,7 +30,24 @@ export default function ShareDialog({ fileId, fileName, onClose }: ShareDialogPr
   };
 
   const copyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        toast.success('Link copied to clipboard!');
+      }).catch(() => fallbackCopy());
+    } else {
+      fallbackCopy();
+    }
+  };
+
+  const fallbackCopy = () => {
+    const textarea = document.createElement('textarea');
+    textarea.value = shareUrl;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
     toast.success('Link copied to clipboard!');
   };
 

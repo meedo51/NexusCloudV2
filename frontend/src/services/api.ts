@@ -64,6 +64,16 @@ export const filesApi = {
     api.get(`/files/${id}/preview`).then(r => r.data),
 };
 
+const publicApi = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+publicApi.interceptors.response.use(
+  (res) => res,
+  (err) => Promise.reject(err)
+);
+
 export const shareApi = {
   create: (fileId: string, password?: string, expiresInDays?: number) =>
     api.post<ShareLink>('/share', { fileId, password, expiresInDays }).then(r => r.data),
@@ -72,9 +82,9 @@ export const shareApi = {
   delete: (id: string) =>
     api.delete(`/share/${id}`).then(r => r.data),
   access: (token: string, password?: string) =>
-    api.get<ShareAccessResponse>(`/share/access/${token}`, { params: { password } }).then(r => r.data),
+    publicApi.get<ShareAccessResponse>(`/share/access/${token}`, { params: { password } }).then(r => r.data),
   download: (token: string, password?: string) =>
-    api.get(`/share/download/${token}`, {
+    publicApi.get(`/share/download/${token}`, {
       params: { password },
       responseType: 'blob',
     }).then(r => r.data),
