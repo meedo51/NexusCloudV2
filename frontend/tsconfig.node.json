@@ -9,6 +9,7 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "composite": true,
+    "emitDeclarationOnly": true,
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
