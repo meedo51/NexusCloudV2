@@ -1,10 +1,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production --ignore-scripts && \
-    cp -R node_modules /tmp/node_modules && \
-    npm ci
+COPY package.json ./
+RUN npm install
 
 COPY tsconfig.json ./
 COPY src ./src
@@ -16,9 +14,10 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nexuscloud
 
-COPY --from=builder /tmp/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
 COPY package.json ./
+RUN npm install --omit=dev --ignore-scripts
+
+COPY --from=builder /app/dist ./dist
 
 RUN mkdir -p /app/uploads /app/data && \
     chown -R nexuscloud:nodejs /app/uploads /app/data
