@@ -6,6 +6,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import SharedFile from './pages/SharedFile';
 import ShareManage from './pages/ShareManage';
+import Profile from './pages/Profile';
+import FileEditor from './pages/FileEditor';
 import LoadingScreen from './components/LoadingScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -32,6 +34,9 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="folder/:folderId" element={<Dashboard />} />
         <Route path="shares" element={<ShareManage />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="editor" element={<FileEditor />} />
+        <Route path="editor/:fileId" element={<FileEditor />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

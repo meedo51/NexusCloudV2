@@ -3,6 +3,15 @@ export interface User {
   username: string;
   email: string;
   passwordHash: string;
+  displayName: string;
+  createdAt: string;
+}
+
+export interface UserPublic {
+  id: string;
+  username: string;
+  email: string;
+  displayName: string;
   createdAt: string;
 }
 

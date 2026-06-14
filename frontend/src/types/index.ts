@@ -2,6 +2,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  displayName: string;
   createdAt: string;
 }
 
@@ -17,6 +18,12 @@ export interface FileItem {
   isFolder: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FileContent {
+  content: string;
+  mimeType: string;
+  name: string;
 }
 
 export interface ShareLink {

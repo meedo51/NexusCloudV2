@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   FiFile, FiFolder, FiImage, FiFileText, FiDownload,
   FiTrash2, FiEdit2, FiShare2, FiInfo, FiMove, FiEye,
-  FiArchive, FiChevronRight,
+  FiArchive, FiCheckSquare, FiSquare, FiUnlock,
 } from 'react-icons/fi';
 import { FileItem } from '../types';
 import { filesApi } from '../services/api';
@@ -35,14 +35,24 @@ function getFileIcon(mimeType: string) {
   return FiFile;
 }
 
+function isArchive(mimeType: string, name: string): boolean {
+  return mimeType.startsWith('application/zip') ||
+    name.endsWith('.zip') || name.endsWith('.rar') ||
+    name.endsWith('.tar') || name.endsWith('.gz') ||
+    name.endsWith('.7z');
+}
+
 interface FileCardProps {
   file: FileItem;
   viewMode: 'grid' | 'list';
   onRefresh: () => void;
   onClick: () => void;
+  selected?: boolean;
+  onSelect?: (id: string, ctrl?: boolean) => void;
+  selectionMode?: boolean;
 }
 
-export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCardProps) {
+export default function FileCard({ file, viewMode, onRefresh, onClick, selected, onSelect, selectionMode }: FileCardProps) {
   const [showShare, setShowShare] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showMove, setShowMove] = useState(false);
@@ -51,12 +61,14 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
   const [newName, setNewName] = useState(file.originalName || file.name);
   const [isDeleting, setIsDeleting] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const Icon = getFileIcon(file.mimeType);
   const isImage = file.mimeType.startsWith('image/');
   const isPreviewable = file.mimeType.startsWith('image/') ||
     file.mimeType === 'application/pdf' ||
     file.mimeType.startsWith('text/');
+  const isArchiveFile = isArchive(file.mimeType, file.name);
 
   const handleRename = async () => {
     if (!newName.trim() || newName === (file.originalName || file.name)) {
@@ -114,6 +126,26 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
     }
   };
 
+  const handleExtract = async () => {
+    setIsExtracting(true);
+    try {
+      const res = await filesApi.extract(file.id);
+      toast.success(`Extracted ${res.files?.length || 0} entries`);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Extraction failed');
+    }
+    setIsExtracting(false);
+  };
+
+  const handleClick = () => {
+    if (selectionMode && onSelect) {
+      onSelect(file.id);
+    } else if (file.isFolder) {
+      onClick();
+    }
+  };
+
   const onContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -136,15 +168,75 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
         { id: 'rename', label: 'Rename', icon: <FiEdit2 size={14} />, shortcut: 'F2', onClick: () => { setNewName(file.originalName || file.name); setIsRenaming(true); } },
         { id: 'move', label: 'Move to...', icon: <FiMove size={14} />, onClick: () => setShowMove(true) },
         { id: 'share', label: 'Share', icon: <FiShare2 size={14} />, onClick: () => setShowShare(true) },
+        ...(isArchiveFile ? [
+          { id: 'extract', label: 'Extract here', icon: <FiUnlock size={14} />, onClick: handleExtract } as MenuItem,
+        ] : []),
         { id: 'divider-1', label: '', icon: <></>, divider: true, onClick: () => {} },
         { id: 'details', label: 'Details', icon: <FiInfo size={14} />, onClick: () => setShowDetails(true) },
         { id: 'divider-2', label: '', icon: <></>, divider: true, onClick: () => {} },
         { id: 'delete', label: 'Delete', icon: <FiTrash2 size={14} />, danger: true, onClick: handleDelete },
       ];
 
-  const handleClick = () => {
-    if (file.isFolder) onClick();
-  };
+  const cardContent = (
+    <>
+      <div className={`relative aspect-[4/3] flex items-center justify-center
+        ${file.isFolder ? 'bg-cyan/5' : isImage ? 'bg-space' : 'bg-white/5'}`}>
+        {isImage && file.path ? (
+          <img src={`/uploads/${file.path.split('uploads/')[1] || file.name}`} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <Icon size={48} className={file.isFolder ? 'text-cyan/60' : 'text-white/30'} />
+        )}
+
+        {selectionMode && (
+          <div className="absolute top-2 left-2 z-10" onClick={e => e.stopPropagation()}>
+            {selected ? <FiCheckSquare size={20} className="text-cyan" /> : <FiSquare size={20} className="text-white/40" />}
+          </div>
+        )}
+
+        {!selectionMode && (
+          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+            {file.isFolder ? (
+              <button onClick={handleDownloadZip} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Download as ZIP">
+                <FiArchive size={14} />
+              </button>
+            ) : (
+              <button onClick={handleDownload} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Download">
+                <FiDownload size={14} />
+              </button>
+            )}
+            <button onClick={() => setShowShare(true)} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Share">
+              <FiShare2 size={14} />
+            </button>
+            <button onClick={handleDelete} disabled={isDeleting} className="p-2 rounded-lg bg-space/80 hover:bg-space text-coral/80 hover:text-coral transition-colors" title="Delete">
+              <FiTrash2 size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="p-3">
+        {isRenaming ? (
+          <input
+            autoFocus
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onBlur={handleRename}
+            onKeyDown={e => e.key === 'Enter' && handleRename()}
+            className="bg-white/5 rounded px-2 py-1 text-sm w-full outline-none border border-cyan/30"
+            onClick={e => e.stopPropagation()}
+          />
+        ) : (
+          <p className="text-sm font-medium truncate" onDoubleClick={() => { if (!selectionMode) { setIsRenaming(true); setNewName(file.originalName || file.name); } }}>
+            {file.originalName || file.name}
+          </p>
+        )}
+        <p className="text-xs text-white/40 mt-1">
+          {file.isFolder ? 'Folder' : formatSize(file.size)}
+        </p>
+        <p className="text-xs text-white/30">{formatDate(file.createdAt)}</p>
+      </div>
+    </>
+  );
 
   if (viewMode === 'list') {
     return (
@@ -153,10 +245,17 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
           layout
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          className="glass-card rounded-xl px-4 py-3 flex items-center gap-4 group cursor-pointer select-none"
+          className={`glass-card rounded-xl px-4 py-3 flex items-center gap-4 group cursor-pointer select-none transition-all ${
+            selected ? 'ring-1 ring-cyan/40 bg-cyan/5' : ''
+          }`}
           onClick={handleClick}
           onContextMenu={onContextMenu}
         >
+          {selectionMode && (
+            <div onClick={e => e.stopPropagation()} className="flex-shrink-0">
+              {selected ? <FiCheckSquare size={18} className="text-cyan" /> : <FiSquare size={18} className="text-white/30" />}
+            </div>
+          )}
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
             ${file.isFolder ? 'bg-cyan/10 text-cyan' : isImage ? 'bg-coral/10 text-coral' : 'bg-white/5 text-white/60'}`}>
             {isImage && file.path ? (
@@ -183,31 +282,33 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
               {file.isFolder ? 'Folder' : formatSize(file.size)} &middot; {formatDate(file.createdAt)}
             </p>
           </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-            {file.isFolder ? (
-              <button onClick={handleDownloadZip} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Download as ZIP">
-                <FiArchive size={16} />
+          {!selectionMode && (
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+              {file.isFolder ? (
+                <button onClick={handleDownloadZip} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Download as ZIP">
+                  <FiArchive size={16} />
+                </button>
+              ) : (
+                <button onClick={handleDownload} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Download">
+                  <FiDownload size={16} />
+                </button>
+              )}
+              {!file.isFolder && (
+                <button onClick={() => setShowShare(true)} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Share">
+                  <FiShare2 size={16} />
+                </button>
+              )}
+              <button onClick={() => { setShowMove(true); }} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Move">
+                <FiMove size={16} />
               </button>
-            ) : (
-              <button onClick={handleDownload} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Download">
-                <FiDownload size={16} />
+              <button onClick={() => { setIsRenaming(true); setNewName(file.originalName || file.name); }} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Rename">
+                <FiEdit2 size={16} />
               </button>
-            )}
-            {!file.isFolder && (
-              <button onClick={() => setShowShare(true)} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Share">
-                <FiShare2 size={16} />
+              <button onClick={handleDelete} disabled={isDeleting} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-coral transition-colors" title="Delete">
+                <FiTrash2 size={16} />
               </button>
-            )}
-            <button onClick={() => { setShowMove(true); }} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Move">
-              <FiMove size={16} />
-            </button>
-            <button onClick={() => { setIsRenaming(true); setNewName(file.originalName || file.name); }} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Rename">
-              <FiEdit2 size={16} />
-            </button>
-            <button onClick={handleDelete} disabled={isDeleting} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-coral transition-colors" title="Delete">
-              <FiTrash2 size={16} />
-            </button>
-          </div>
+            </div>
+          )}
         </motion.div>
         {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} onClose={() => setShowShare(false)} />}
         {showPreview && <FilePreview file={file} onClose={() => setShowPreview(false)} />}
@@ -225,58 +326,13 @@ export default function FileCard({ file, viewMode, onRefresh, onClick }: FileCar
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         whileHover={{ y: -4 }}
-        className="glass-card rounded-2xl overflow-hidden group cursor-pointer select-none"
+        className={`glass-card rounded-2xl overflow-hidden group cursor-pointer select-none transition-all ${
+          selected ? 'ring-1 ring-cyan/40 bg-cyan/5' : ''
+        }`}
         onClick={handleClick}
         onContextMenu={onContextMenu}
       >
-        <div className={`relative aspect-[4/3] flex items-center justify-center
-          ${file.isFolder ? 'bg-cyan/5' : isImage ? 'bg-space' : 'bg-white/5'}`}>
-          {isImage && file.path ? (
-            <img src={`/uploads/${file.path.split('uploads/')[1] || file.name}`} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <Icon size={48} className={file.isFolder ? 'text-cyan/60' : 'text-white/30'} />
-          )}
-
-          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-            {file.isFolder ? (
-              <button onClick={handleDownloadZip} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Download as ZIP">
-                <FiArchive size={14} />
-              </button>
-            ) : (
-              <button onClick={handleDownload} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Download">
-                <FiDownload size={14} />
-              </button>
-            )}
-            <button onClick={() => setShowShare(true)} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Share">
-              <FiShare2 size={14} />
-            </button>
-            <button onClick={handleDelete} disabled={isDeleting} className="p-2 rounded-lg bg-space/80 hover:bg-space text-coral/80 hover:text-coral transition-colors" title="Delete">
-              <FiTrash2 size={14} />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-3">
-          {isRenaming ? (
-            <input
-              autoFocus
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              onBlur={handleRename}
-              onKeyDown={e => e.key === 'Enter' && handleRename()}
-              className="bg-white/5 rounded px-2 py-1 text-sm w-full outline-none border border-cyan/30"
-              onClick={e => e.stopPropagation()}
-            />
-          ) : (
-            <p className="text-sm font-medium truncate" onDoubleClick={() => { setIsRenaming(true); setNewName(file.originalName || file.name); }}>
-              {file.originalName || file.name}
-            </p>
-          )}
-          <p className="text-xs text-white/40 mt-1">
-            {file.isFolder ? 'Folder' : formatSize(file.size)}
-          </p>
-          <p className="text-xs text-white/30">{formatDate(file.createdAt)}</p>
-        </div>
+        {cardContent}
       </motion.div>
       {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} onClose={() => setShowShare(false)} />}
       {showPreview && <FilePreview file={file} onClose={() => setShowPreview(false)} />}

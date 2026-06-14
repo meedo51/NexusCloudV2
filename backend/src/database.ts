@@ -20,17 +20,8 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
     passwordHash TEXT NOT NULL,
+    displayName TEXT NOT NULL DEFAULT '',
     createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS folders (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    parentId TEXT,
-    userId TEXT NOT NULL,
-    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (parentId) REFERENCES folders(id) ON DELETE CASCADE,
-    FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS files (
@@ -39,7 +30,7 @@ db.exec(`
     originalName TEXT NOT NULL,
     mimeType TEXT NOT NULL DEFAULT 'application/octet-stream',
     size INTEGER NOT NULL DEFAULT 0,
-    path TEXT NOT NULL,
+    path TEXT NOT NULL DEFAULT '',
     folderId TEXT,
     userId TEXT NOT NULL,
     isFolder INTEGER NOT NULL DEFAULT 0,
@@ -62,10 +53,14 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_files_userId ON files(userId);
   CREATE INDEX IF NOT EXISTS idx_files_folderId ON files(folderId);
-  CREATE INDEX IF NOT EXISTS idx_folders_userId ON folders(userId);
-  CREATE INDEX IF NOT EXISTS idx_folders_parentId ON folders(parentId);
   CREATE INDEX IF NOT EXISTS idx_share_links_token ON share_links(token);
   CREATE INDEX IF NOT EXISTS idx_share_links_fileId ON share_links(fileId);
 `);
+
+try {
+  db.prepare("ALTER TABLE users ADD COLUMN displayName TEXT NOT NULL DEFAULT ''").run();
+} catch {
+  // column already exists
+}
 
 export default db;

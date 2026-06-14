@@ -11,14 +11,15 @@ interface FolderNode {
 }
 
 interface MoveDialogProps {
-  fileId: string;
+  fileId: string | null;
   fileName: string;
   currentFolderId: string | null;
   onClose: () => void;
   onMoved: () => void;
+  batchIds?: string[];
 }
 
-export default function MoveDialog({ fileId, fileName, currentFolderId, onClose, onMoved }: MoveDialogProps) {
+export default function MoveDialog({ fileId, fileName, currentFolderId, onClose, onMoved, batchIds }: MoveDialogProps) {
   const [folders, setFolders] = useState<FolderNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(currentFolderId);
   const [loading, setLoading] = useState(true);
@@ -26,10 +27,13 @@ export default function MoveDialog({ fileId, fileName, currentFolderId, onClose,
 
   useEffect(() => {
     filesApi.allFolders().then(data => {
-      setFolders(data.filter((f: FolderNode) => f.id !== fileId));
+      const filtered = batchIds
+        ? data.filter((f: FolderNode) => !batchIds.includes(f.id))
+        : data.filter((f: FolderNode) => f.id !== fileId);
+      setFolders(filtered);
     }).catch(() => toast.error('Failed to load folders'))
     .finally(() => setLoading(false));
-  }, [fileId]);
+  }, [fileId, batchIds]);
 
   const rootFolders = folders.filter(f => f.parentId === null);
   const getChildren = (parentId: string) => folders.filter(f => f.parentId === parentId);
@@ -37,8 +41,12 @@ export default function MoveDialog({ fileId, fileName, currentFolderId, onClose,
   const handleMove = async () => {
     setSaving(true);
     try {
-      const targetId = selectedId === currentFolderId ? null : selectedId;
-      await filesApi.move(fileId, targetId);
+      if (batchIds) {
+        await filesApi.batchMove(batchIds, selectedId);
+      } else if (fileId) {
+        const targetId = selectedId === currentFolderId ? null : selectedId;
+        await filesApi.move(fileId, targetId);
+      }
       toast.success('Moved successfully');
       onMoved();
       onClose();

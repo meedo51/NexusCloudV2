@@ -1,11 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiGrid, FiList, FiSearch, FiArrowLeft, FiFolderPlus, FiFilter } from 'react-icons/fi';
+import {
+  FiGrid, FiList, FiSearch, FiArrowLeft, FiFolderPlus, FiFilter,
+  FiFilePlus, FiUpload, FiInfo, FiCheckSquare, FiSquare,
+  FiArchive, FiTrash2, FiMove, FiX,
+} from 'react-icons/fi';
 import { filesApi } from '../services/api';
 import { FileItem } from '../types';
 import FileCard from '../components/FileCard';
 import UploadZone from '../components/UploadZone';
+import ContextMenu, { MenuItem } from '../components/ContextMenu';
+import DetailsDialog from '../components/DetailsDialog';
+import MoveDialog from '../components/MoveDialog';
 import toast from 'react-hot-toast';
 
 export default function Dashboard() {
@@ -18,7 +25,19 @@ export default function Dashboard() {
   const [typeFilter, setTypeFilter] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+  const [showNewFileInput, setShowNewFileInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [newFileName, setNewFileName] = useState('');
+  const [newFileContent, setNewFileContent] = useState('');
+  const [showFolderDetails, setShowFolderDetails] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchZipName, setBatchZipName] = useState('');
+  const [showBatchZip, setShowBatchZip] = useState(false);
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+  const [showBatchMove, setShowBatchMove] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -39,6 +58,10 @@ export default function Dashboard() {
     loadFiles();
   }, [loadFiles]);
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [folderId]);
+
   const createFolder = async () => {
     if (!newFolderName.trim()) return;
     try {
@@ -52,11 +75,117 @@ export default function Dashboard() {
     }
   };
 
+  const createFile = async () => {
+    if (!newFileName.trim()) return;
+    try {
+      await filesApi.createFile(newFileName.trim(), newFileContent, folderId);
+      toast.success('File created');
+      setNewFileName('');
+      setNewFileContent('');
+      setShowNewFileInput(false);
+      loadFiles();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to create file');
+    }
+  };
+
   const handleFileClick = (file: FileItem) => {
     if (file.isFolder) {
       navigate(`/folder/${file.id}`);
     }
   };
+
+  const handleSelect = (id: string, ctrl?: boolean) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const handleBatchZip = async () => {
+    if (selectedIds.size === 0) return;
+    setIsProcessing(true);
+    try {
+      const name = batchZipName.trim() || 'batch-export';
+      const blob = await filesApi.batchZip(Array.from(selectedIds), name);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Zip created');
+      setShowBatchZip(false);
+      setBatchZipName('');
+    } catch {
+      toast.error('Failed to create zip');
+    }
+    setIsProcessing(false);
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsProcessing(true);
+    try {
+      await filesApi.batchDelete(Array.from(selectedIds));
+      toast.success('Items deleted');
+      setShowBatchDeleteConfirm(false);
+      clearSelection();
+      loadFiles();
+    } catch {
+      toast.error('Failed to delete');
+    }
+    setIsProcessing(false);
+  };
+
+  const handleBatchMoved = () => {
+    clearSelection();
+    loadFiles();
+  };
+
+  const handleContextMenuAction = (action: string) => {
+    switch (action) {
+      case 'details':
+        setShowFolderDetails(true);
+        break;
+      case 'new-folder':
+        setShowNewFolderInput(true);
+        setShowNewFileInput(false);
+        setShowUpload(false);
+        break;
+      case 'new-file':
+        setShowNewFileInput(true);
+        setShowNewFolderInput(false);
+        setShowUpload(false);
+        break;
+      case 'upload':
+        setShowUpload(true);
+        setShowNewFolderInput(false);
+        setShowNewFileInput(false);
+        break;
+    }
+  };
+
+  const onContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    if (selectionMode) return;
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, [selectionMode]);
+
+  const emptyMenuItems: MenuItem[] = [
+    { id: 'details', label: 'Folder Details', icon: <FiInfo size={14} />, onClick: () => setShowFolderDetails(true) },
+    { id: 'divider-1', label: '', icon: <></>, divider: true, onClick: () => {} },
+    { id: 'new-folder', label: 'Create New Folder', icon: <FiFolderPlus size={14} />, onClick: () => handleContextMenuAction('new-folder') },
+    { id: 'new-file', label: 'Create New File', icon: <FiFilePlus size={14} />, onClick: () => handleContextMenuAction('new-file') },
+    { id: 'upload', label: 'Upload File', icon: <FiUpload size={14} />, onClick: () => handleContextMenuAction('upload') },
+  ];
 
   const fileTypes = [
     { label: 'All', value: '' },
@@ -67,8 +196,10 @@ export default function Dashboard() {
     { label: 'Audio', value: 'audio' },
   ];
 
+  const currentDirName = files.length > 0 ? (files[0].folderId ? 'Folder' : 'My Files') : 'My Files';
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6" onContextMenu={onContextMenu}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {folderId && (
@@ -86,6 +217,13 @@ export default function Dashboard() {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setSelectionMode(!selectionMode)}
+            className={`p-2 rounded-xl transition-colors ${selectionMode ? 'glass text-coral' : 'text-white/40 hover:text-white'}`}
+            title="Toggle selection mode"
+          >
+            <FiCheckSquare size={18} />
+          </button>
+          <button
             onClick={() => setViewMode('grid')}
             className={`p-2 rounded-xl transition-colors ${viewMode === 'grid' ? 'glass text-cyan' : 'text-white/40 hover:text-white'}`}
           >
@@ -98,20 +236,65 @@ export default function Dashboard() {
             <FiList size={18} />
           </button>
           <button
-            onClick={() => { setShowNewFolderInput(!showNewFolderInput); setShowUpload(false); }}
+            onClick={() => { setShowNewFolderInput(!showNewFolderInput); setShowNewFileInput(false); setShowUpload(false); }}
             className="p-2 rounded-xl glass hover:bg-white/5 transition-colors text-cyan"
             title="New folder"
           >
             <FiFolderPlus size={18} />
           </button>
           <button
-            onClick={() => { setShowUpload(!showUpload); setShowNewFolderInput(false); }}
+            onClick={() => { setShowNewFileInput(!showNewFileInput); setShowNewFolderInput(false); setShowUpload(false); }}
+            className="p-2 rounded-xl glass hover:bg-white/5 transition-colors text-cyan"
+            title="New file"
+          >
+            <FiFilePlus size={18} />
+          </button>
+          <button
+            onClick={() => { setShowUpload(!showUpload); setShowNewFolderInput(false); setShowNewFileInput(false); }}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan to-cyan/80 text-space font-semibold text-sm hover:opacity-90 transition-opacity"
           >
             Upload
           </button>
         </div>
       </div>
+
+      {selectionMode && selectedIds.size > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-2xl p-3 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <button onClick={clearSelection} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40">
+              <FiX size={16} />
+            </button>
+            <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setShowBatchZip(true); setBatchZipName(''); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass hover:bg-white/5 text-cyan text-xs"
+            >
+              <FiArchive size={14} />
+              Zip
+            </button>
+            <button
+              onClick={() => setShowBatchMove(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass hover:bg-white/5 text-cyan text-xs"
+            >
+              <FiMove size={14} />
+              Move
+            </button>
+            <button
+              onClick={() => setShowBatchDeleteConfirm(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass hover:bg-white/5 text-coral text-xs"
+            >
+              <FiTrash2 size={14} />
+              Delete
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -155,7 +338,7 @@ export default function Dashboard() {
                 onChange={e => setNewFolderName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && createFolder()}
                 placeholder="Folder name..."
-                className="flex-1 px-3 py-2 rounded-xl glass text-sm text-white placeholder-white/20 outline-none focus:border-cyan/30 transition-colors"
+                className="flex-1 px-3 py-2 rounded-xl glass text-sm text-white placeholder-white/30 outline-none focus:border-cyan/30 transition-colors"
               />
               <button onClick={createFolder} className="px-4 py-2 rounded-xl bg-cyan text-space text-sm font-semibold">
                 Create
@@ -163,6 +346,43 @@ export default function Dashboard() {
               <button onClick={() => setShowNewFolderInput(false)} className="px-3 py-2 rounded-xl text-white/40 hover:text-white text-sm">
                 Cancel
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showNewFileInput && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="glass rounded-2xl p-4 space-y-3">
+              <input
+                autoFocus
+                value={newFileName}
+                onChange={e => setNewFileName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && createFile()}
+                placeholder="filename.ext (e.g. notes.md, script.py)"
+                className="w-full px-3 py-2 rounded-xl glass text-sm text-white placeholder-white/30 outline-none focus:border-cyan/30 transition-colors"
+              />
+              <textarea
+                value={newFileContent}
+                onChange={e => setNewFileContent(e.target.value)}
+                placeholder="File content (optional)..."
+                rows={4}
+                className="w-full px-3 py-2 rounded-xl glass text-sm text-white placeholder-white/30 outline-none focus:border-cyan/30 transition-colors resize-none font-mono"
+              />
+              <div className="flex gap-2">
+                <button onClick={createFile} className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan to-cyan/80 text-space text-sm font-semibold">
+                  Create File
+                </button>
+                <button onClick={() => setShowNewFileInput(false)} className="px-3 py-2 rounded-xl text-white/40 hover:text-white text-sm">
+                  Cancel
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -197,6 +417,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
+          onClick={() => setContextMenu(null)}
           className="glass rounded-2xl p-12 text-center"
         >
           <FiSearch className="mx-auto mb-3 text-white/20" size={48} />
@@ -204,7 +425,9 @@ export default function Dashboard() {
             {search || typeFilter ? 'No files match your search' : 'This folder is empty'}
           </p>
           <p className="text-sm text-white/30 mt-1">
-            {search || typeFilter ? 'Try different search terms or filters' : 'Upload files or create a folder to get started'}
+            {search || typeFilter
+              ? 'Try different search terms or filters'
+              : 'Right-click here for options, or use the buttons above'}
           </p>
         </motion.div>
       ) : viewMode === 'grid' ? (
@@ -217,6 +440,9 @@ export default function Dashboard() {
                 viewMode="grid"
                 onRefresh={loadFiles}
                 onClick={() => handleFileClick(file)}
+                selected={selectedIds.has(file.id)}
+                onSelect={handleSelect}
+                selectionMode={selectionMode}
               />
             ))}
           </AnimatePresence>
@@ -231,10 +457,100 @@ export default function Dashboard() {
                 viewMode="list"
                 onRefresh={loadFiles}
                 onClick={() => handleFileClick(file)}
+                selected={selectedIds.has(file.id)}
+                onSelect={handleSelect}
+                selectionMode={selectionMode}
               />
             ))}
           </AnimatePresence>
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu x={contextMenu.x} y={contextMenu.y} items={emptyMenuItems} onClose={() => setContextMenu(null)} />
+      )}
+
+      {showFolderDetails && folderId && (
+        <DetailsDialog fileId={folderId} onClose={() => setShowFolderDetails(false)} />
+      )}
+
+      {showFolderDetails && !folderId && (
+        <DetailsDialog fileId="" onClose={() => setShowFolderDetails(false)} rootMode={true} />
+      )}
+
+      {showBatchZip && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowBatchZip(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={e => e.stopPropagation()}
+            className="glass-strong rounded-2xl p-6 w-full max-w-sm"
+          >
+            <h3 className="text-lg font-semibold mb-2">Compress to ZIP</h3>
+            <p className="text-sm text-white/60 mb-4">{selectedIds.size} items selected</p>
+            <input
+              autoFocus
+              value={batchZipName}
+              onChange={e => setBatchZipName(e.target.value)}
+              placeholder="Archive name (optional)"
+              className="w-full px-3 py-2.5 rounded-xl glass text-sm text-white placeholder-white/20 outline-none focus:border-cyan/30 transition-colors mb-4"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setShowBatchZip(false)} className="flex-1 py-2.5 rounded-xl glass hover:bg-white/5 text-sm">
+                Cancel
+              </button>
+              <button onClick={handleBatchZip} disabled={isProcessing} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan to-cyan/80 text-space text-sm font-semibold disabled:opacity-50">
+                {isProcessing ? 'Creating...' : 'Create ZIP'}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {showBatchDeleteConfirm && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowBatchDeleteConfirm(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={e => e.stopPropagation()}
+            className="glass-strong rounded-2xl p-6 w-full max-w-sm text-center"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-coral/10 flex items-center justify-center mx-auto mb-4">
+              <FiTrash2 size={24} className="text-coral" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Delete {selectedIds.size} item(s)?</h3>
+            <p className="text-sm text-white/60 mb-6">This action cannot be undone</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowBatchDeleteConfirm(false)} className="flex-1 py-2.5 rounded-xl glass hover:bg-white/5 text-sm">
+                Cancel
+              </button>
+              <button onClick={handleBatchDelete} disabled={isProcessing} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-coral to-coral/80 text-white text-sm font-semibold disabled:opacity-50">
+                {isProcessing ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {showBatchMove && (
+        <MoveDialog
+          fileId={null}
+          fileName={`${selectedIds.size} item(s)`}
+          currentFolderId={null}
+          onClose={() => setShowBatchMove(false)}
+          onMoved={handleBatchMoved}
+          batchIds={Array.from(selectedIds)}
+        />
       )}
     </div>
   );

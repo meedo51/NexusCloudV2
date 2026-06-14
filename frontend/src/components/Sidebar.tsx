@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiFolder, FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX } from 'react-icons/fi';
+import { FiFolder, FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX, FiUser } from 'react-icons/fi';
 import { filesApi } from '../services/api';
 import { FileItem } from '../types';
 import toast from 'react-hot-toast';
@@ -45,6 +45,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const navItems = [
     { icon: FiHome, label: 'My Files', path: '/', active: location.pathname === '/' },
     { icon: FiShare2, label: 'Shared Links', path: '/shares', active: location.pathname === '/shares' },
+    { icon: FiUser, label: 'Profile', path: '/profile', active: location.pathname === '/profile' },
   ];
 
   return (

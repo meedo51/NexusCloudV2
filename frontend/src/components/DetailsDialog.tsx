@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiX, FiFile, FiFolder, FiCalendar, FiClock, FiHardDrive,
-  FiType, FiTag, FiHash, FiLayers,
+  FiType, FiTag, FiHash, FiLayers, FiHome,
 } from 'react-icons/fi';
 import { filesApi } from '../services/api';
 import { FileItem } from '../types';
@@ -25,6 +25,7 @@ function formatDate(dateStr: string): string {
 interface DetailsDialogProps {
   fileId: string;
   onClose: () => void;
+  rootMode?: boolean;
 }
 
 interface DetailRowProps {
@@ -43,13 +44,17 @@ function DetailRow({ icon, label, value }: DetailRowProps) {
   );
 }
 
-export default function DetailsDialog({ fileId, onClose }: DetailsDialogProps) {
+export default function DetailsDialog({ fileId, onClose, rootMode }: DetailsDialogProps) {
   const [file, setFile] = useState<FileItem | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!rootMode);
 
   useEffect(() => {
-    filesApi.details(fileId).then(setFile).catch(() => {}).finally(() => setLoading(false));
-  }, [fileId]);
+    if (fileId && !rootMode) {
+      filesApi.details(fileId).then(setFile).catch(() => {}).finally(() => setLoading(false));
+    }
+  }, [fileId, rootMode]);
+
+  const title = rootMode ? 'My Files' : 'Details';
 
   return (
     <AnimatePresence>
@@ -68,7 +73,7 @@ export default function DetailsDialog({ fileId, onClose }: DetailsDialogProps) {
           className="glass-strong rounded-2xl p-6 w-full max-w-sm"
         >
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-lg font-semibold">Details</h3>
+            <h3 className="text-lg font-semibold">{title}</h3>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40">
               <FiX size={18} />
             </button>
@@ -105,6 +110,20 @@ export default function DetailsDialog({ fileId, onClose }: DetailsDialogProps) {
               <DetailRow icon={<FiCalendar size={14} />} label="Created" value={formatDate(file.createdAt)} />
               <DetailRow icon={<FiClock size={14} />} label="Modified" value={formatDate(file.updatedAt)} />
               <DetailRow icon={<FiHash size={14} />} label="ID" value={file.id.slice(0, 8)} />
+            </div>
+          ) : rootMode ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
+                <div className="w-12 h-12 rounded-2xl bg-cyan/10 flex items-center justify-center">
+                  <FiHome size={22} className="text-cyan" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium">My Files</p>
+                  <p className="text-xs text-white/40">Root directory</p>
+                </div>
+              </div>
+              <DetailRow icon={<FiTag size={14} />} label="Name" value="My Files" />
+              <DetailRow icon={<FiType size={14} />} label="Type" value="Root folder" />
             </div>
           ) : (
             <p className="text-white/40 text-center py-8">Failed to load details</p>
