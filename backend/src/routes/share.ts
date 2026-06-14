@@ -27,6 +27,10 @@ router.post('/', authenticateToken, (req: Request, res: Response) => {
     res.status(404).json({ error: 'File not found' });
     return;
   }
+  if (file.isFolder) {
+    res.status(400).json({ error: 'Folders cannot be shared' });
+    return;
+  }
 
   const id = uuidv4();
   const token = generateToken();

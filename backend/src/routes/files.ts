@@ -127,7 +127,7 @@ router.put('/:id/rename', (req: Request, res: Response) => {
   const updatedAt = new Date().toISOString();
 
   if (file.isFolder) {
-    db.prepare('UPDATE files SET name = ?, updatedAt = ? WHERE id = ?').run(name, updatedAt, id);
+    db.prepare('UPDATE files SET name = ?, originalName = ?, updatedAt = ? WHERE id = ?').run(name, name, updatedAt, id);
   } else {
     const ext = path.extname(file.name);
     const newName = name.endsWith(ext) ? name : `${name}${ext}`;

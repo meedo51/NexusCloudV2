@@ -25,22 +25,23 @@ export default function UploadZone({ folderId, onUploadComplete }: UploadZonePro
     const newUploads = accepted.map(f => ({ file: f, progress: 0, status: 'pending' as const }));
     setUploads(prev => [...prev, ...newUploads]);
 
-    newUploads.forEach(({ file }) => {
-      const idx = uploads.length + newUploads.indexOf({ file, progress: 0, status: 'pending' });
-      setUploads(prev => prev.map((u, i) => i === idx ? { ...u, status: 'uploading' } : u));
+    const startIdx = uploads.length;
+    newUploads.forEach((upload, idx) => {
+      const actualIdx = startIdx + idx;
+      setUploads(prev => prev.map((u, i) => i === actualIdx ? { ...u, status: 'uploading' } : u));
 
-      filesApi.upload(file, folderId, (pct) => {
-        setUploads(prev => prev.map((u, i) => i === idx ? { ...u, progress: pct } : u));
+      filesApi.upload(upload.file, folderId, (pct) => {
+        setUploads(prev => prev.map((u, i) => i === actualIdx ? { ...u, progress: pct } : u));
       })
         .then(() => {
-          setUploads(prev => prev.map((u, i) => i === idx ? { ...u, status: 'done', progress: 100 } : u));
+          setUploads(prev => prev.map((u, i) => i === actualIdx ? { ...u, status: 'done', progress: 100 } : u));
           onUploadComplete();
         })
         .catch((err) => {
           setUploads(prev => prev.map((u, i) =>
-            i === idx ? { ...u, status: 'error', error: err.response?.data?.error || err.message } : u
+            i === actualIdx ? { ...u, status: 'error', error: err.response?.data?.error || err.message } : u
           ));
-          toast.error(`Failed to upload ${file.name}`);
+          toast.error(`Failed to upload ${upload.file.name}`);
         });
     });
   }, [folderId, onUploadComplete, uploads.length]);

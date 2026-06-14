@@ -13,6 +13,7 @@ type PreviewMode = 'image' | 'pdf' | 'text' | 'unsupported';
 
 export default function FilePreview({ file, onClose }: FilePreviewProps) {
   const [textContent, setTextContent] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -30,7 +31,15 @@ export default function FilePreview({ file, onClose }: FilePreviewProps) {
         setTextContent(res.content);
       }).catch(() => {});
     }
-  }, [file, isText]);
+    if (isPdf) {
+      filesApi.download(file.id).then((blob: Blob) => {
+        setPdfUrl(URL.createObjectURL(blob));
+      }).catch(() => {});
+    }
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  }, [file, isText, isPdf]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -125,7 +134,7 @@ export default function FilePreview({ file, onClose }: FilePreviewProps) {
               </div>
             ) : previewMode === 'pdf' ? (
               <iframe
-                src={`/api/files/${file.id}/preview#view=FitH`}
+                src={pdfUrl || ''}
                 className="w-full h-[75vh] rounded-xl"
                 title={file.originalName}
               />
