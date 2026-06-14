@@ -44,9 +44,6 @@ services:
       #- backend
     networks:
       - nexuscloud-net
-  labels:
-    - "traefik.http.routers.nexuscloudv2.rule=Host(`xus.me`)"
-    - "traefik.http.routers.nexuscloudv2-secure.rule=Host(`xus.me`)"
 networks:
   nexuscloud-net: 
 volumes:
