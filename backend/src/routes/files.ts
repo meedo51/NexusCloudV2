@@ -299,27 +299,13 @@ router.get('/:id/download-zip', (req: Request, res: Response) => {
 
   archive.pipe(res);
 
-  const addFilesToArchive = (folderId: string, archivePath: string) => {
-    const entries = db.prepare(
-      'SELECT * FROM files WHERE folderId = ? AND userId = ?'
-    ).all(folderId, userId) as FileEntry[];
-
-    for (const entry of entries) {
-      if (entry.isFolder) {
-        addFilesToArchive(entry.id, path.join(archivePath, entry.name));
-      } else if (fs.existsSync(entry.path)) {
-        archive.file(entry.path, { name: path.join(archivePath, entry.originalName) });
-      }
-    }
-  };
-
   const rootEntries = db.prepare(
     'SELECT * FROM files WHERE folderId = ? AND userId = ?'
   ).all(id, userId) as FileEntry[];
 
   for (const entry of rootEntries) {
     if (entry.isFolder) {
-      addFilesToArchive(entry.id, entry.name);
+      addFilesToArchive(entry.id, entry.name, userId, archive);
     } else if (fs.existsSync(entry.path)) {
       archive.file(entry.path, { name: entry.originalName });
     }
@@ -418,6 +404,20 @@ router.get('/:id/details', (req: Request, res: Response) => {
   });
 });
 
+function addFilesToArchive(folderId: string, archivePath: string, userId: string, archive: archiver.Archiver) {
+  const entries = db.prepare(
+    'SELECT * FROM files WHERE folderId = ? AND userId = ?'
+  ).all(folderId, userId) as FileEntry[];
+
+  for (const entry of entries) {
+    if (entry.isFolder) {
+      addFilesToArchive(entry.id, path.join(archivePath, entry.name), userId, archive);
+    } else if (fs.existsSync(entry.path)) {
+      archive.file(entry.path, { name: path.join(archivePath, entry.originalName) });
+    }
+  }
+}
+
 router.post('/batch/zip', (req: Request, res: Response) => {
   const { ids, zipName } = req.body;
   const userId = req.user!.userId;
@@ -440,10 +440,76 @@ router.post('/batch/zip', (req: Request, res: Response) => {
   archive.pipe(res);
 
   for (const entry of entries) {
-    if (!entry.isFolder && fs.existsSync(entry.path)) {
+    if (entry.isFolder) {
+      addFilesToArchive(entry.id, entry.name, userId, archive);
+    } else if (fs.existsSync(entry.path)) {
       archive.file(entry.path, { name: entry.originalName });
     }
   }
+
+  archive.finalize();
+});
+
+router.post('/batch/save-zip', (req: Request, res: Response) => {
+  const { ids, zipName, folderId } = req.body;
+  const userId = req.user!.userId;
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ error: 'File IDs are required' });
+    return;
+  }
+
+  const placeholders = ids.map(() => '?').join(',');
+  const entries = db.prepare(
+    `SELECT * FROM files WHERE id IN (${placeholders}) AND userId = ?`
+  ).all(...ids, userId) as FileEntry[];
+
+  const name = (zipName || 'batch-export').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const zipId = uuidv4();
+  const userDir = path.join(UPLOAD_DIR_PATH, userId);
+  if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
+  const zipPath = path.join(userDir, `${zipId}.zip`).replace(/\\/g, '/');
+
+  const output = fs.createWriteStream(zipPath);
+  const archive = archiver('zip', { zlib: { level: 9 } });
+
+  archive.pipe(output);
+
+  for (const entry of entries) {
+    if (entry.isFolder) {
+      addFilesToArchive(entry.id, entry.name, userId, archive);
+    } else if (fs.existsSync(entry.path)) {
+      archive.file(entry.path, { name: entry.originalName });
+    }
+  }
+
+  output.on('close', () => {
+    const now = new Date().toISOString();
+    const zipFile = {
+      id: zipId,
+      name: `${zipId}.zip`,
+      originalName: `${name}.zip`,
+      mimeType: 'application/zip',
+      size: archive.pointer(),
+      path: zipPath,
+      folderId: folderId || null,
+      userId,
+      isFolder: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    db.prepare(`
+      INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(zipFile.id, zipFile.name, zipFile.originalName, zipFile.mimeType, zipFile.size, zipFile.path, zipFile.folderId, zipFile.userId, 0, zipFile.createdAt, zipFile.updatedAt);
+
+    res.status(201).json(zipFile);
+  });
+
+  archive.on('error', (err: any) => {
+    res.status(500).json({ error: `Failed to create zip: ${err.message}` });
+  });
 
   archive.finalize();
 });
@@ -506,6 +572,66 @@ router.post('/batch/move', (req: Request, res: Response) => {
   ).run(folderId || null, updatedAt, ...ids, userId);
 
   res.json({ message: `${ids.length} items moved successfully` });
+});
+
+function deepCopyEntry(entryId: string, destFolderId: string | null, userId: string): void {
+  const entry = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(entryId, userId) as FileEntry | undefined;
+  if (!entry) return;
+
+  const newId = uuidv4();
+  const now = new Date().toISOString();
+
+  if (entry.isFolder) {
+    db.prepare(`
+      INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(newId, entry.name, entry.name, 'application/folder', 0, '', destFolderId, userId, 1, now, now);
+
+    const children = db.prepare('SELECT * FROM files WHERE folderId = ? AND userId = ?').all(entryId, userId) as FileEntry[];
+    for (const child of children) {
+      deepCopyEntry(child.id, newId, userId);
+    }
+  } else {
+    const ext = path.extname(entry.name);
+    const safeName = `${newId}${ext}`;
+    const userDir = path.join(UPLOAD_DIR_PATH, userId);
+    if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
+    const newPath = path.join(userDir, safeName).replace(/\\/g, '/');
+
+    if (fs.existsSync(entry.path)) {
+      fs.copyFileSync(entry.path, newPath);
+    }
+
+    db.prepare(`
+      INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(newId, safeName, entry.originalName, entry.mimeType, entry.size, newPath, destFolderId, userId, 0, now, now);
+  }
+}
+
+router.post('/batch/copy', (req: Request, res: Response) => {
+  const { ids, folderId } = req.body;
+  const userId = req.user!.userId;
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ error: 'File IDs are required' });
+    return;
+  }
+
+  if (folderId) {
+    const targetFolder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ?')
+      .get(folderId, userId, 1);
+    if (!targetFolder) {
+      res.status(404).json({ error: 'Target folder not found' });
+      return;
+    }
+  }
+
+  for (const id of ids) {
+    deepCopyEntry(id, folderId || null, userId);
+  }
+
+  res.json({ message: `${ids.length} items copied successfully` });
 });
 
 router.post('/:id/extract', (req: Request, res: Response) => {

@@ -82,10 +82,14 @@ export const filesApi = {
     api.post(`/files/${id}/extract`, { destFolderId }).then(r => r.data),
   batchZip: (ids: string[], zipName?: string) =>
     api.post('/files/batch/zip', { ids, zipName }, { responseType: 'blob' }).then(r => r.data),
+  batchSaveZip: (ids: string[], zipName: string, folderId?: string) =>
+    api.post('/files/batch/save-zip', { ids, zipName, folderId }).then(r => r.data),
   batchDelete: (ids: string[]) =>
     api.post('/files/batch/delete', { ids }).then(r => r.data),
   batchMove: (ids: string[], folderId: string | null) =>
     api.post('/files/batch/move', { ids, folderId }).then(r => r.data),
+  batchCopy: (ids: string[], folderId: string | null) =>
+    api.post('/files/batch/copy', { ids, folderId }).then(r => r.data),
 };
 
 const publicApi = axios.create({
