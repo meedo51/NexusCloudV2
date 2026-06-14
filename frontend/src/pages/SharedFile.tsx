@@ -18,6 +18,8 @@ export default function SharedFile() {
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<ShareAccessResponse | null>(null);
   const [password, setPassword] = useState('');
+  const [passwordAttempt, setPasswordAttempt] = useState('');
+  const [hasPassword, setHasPassword] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -27,6 +29,7 @@ export default function SharedFile() {
     setError('');
     try {
       const res = await shareApi.access(token, pass);
+      if (res.protected) setHasPassword(true);
       setData(res);
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Failed to access shared file';
@@ -43,13 +46,15 @@ export default function SharedFile() {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordAttempt(password);
     await fetchAccess(password);
   };
 
   const handleDownload = async () => {
     if (!token) return;
     try {
-      const blob = await shareApi.download(token, data?.protected ? password : undefined);
+      const pass = hasPassword ? passwordAttempt : undefined;
+      const blob = await shareApi.download(token, pass);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
