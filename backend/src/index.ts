@@ -12,6 +12,7 @@ import fs from 'fs';
 import authRoutes from './routes/auth';
 import fileRoutes from './routes/files';
 import shareRoutes from './routes/share';
+import db from './database';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -33,6 +34,35 @@ const shareLimiter = rateLimit({
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/share', shareLimiter, shareRoutes);
+
+const PURGE_INTERVAL_MS = parseInt(process.env.PURGE_INTERVAL_MS || '86400000', 10);
+setInterval(() => {
+  try {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const oldFiles = db.prepare(
+      'SELECT * FROM files WHERE deletedAt IS NOT NULL AND deletedAt < ?'
+    ).all(cutoff) as any[];
+    for (const file of oldFiles) {
+      if (!file.isFolder && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      if (file.isFolder) {
+        const descendants = db.prepare("SELECT * FROM files WHERE folderId = ?").all(file.id) as any[];
+        for (const d of descendants) {
+          if (!d.isFolder && d.path && fs.existsSync(d.path)) fs.unlinkSync(d.path);
+        }
+        db.prepare("DELETE FROM files WHERE folderId = ?").run(file.id);
+      }
+      db.prepare('DELETE FROM files WHERE id = ?').run(file.id);
+    }
+    if (oldFiles.length > 0) {
+      for (const file of oldFiles) {
+        db.prepare('UPDATE users SET usedStorageBytes = (SELECT COALESCE(SUM(size), 0) FROM files WHERE userId = ? AND isFolder = 0 AND deletedAt IS NULL) WHERE id = ?').run(file.userId, file.userId);
+      }
+      console.log(`Auto-purged ${oldFiles.length} expired trash items`);
+    }
+  } catch (err) {
+    console.error('Purge error:', err);
+  }
+}, PURGE_INTERVAL_MS);
 
 const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {

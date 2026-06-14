@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiFolder, FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX, FiUser } from 'react-icons/fi';
+import {
+  FiFolder, FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX, FiUser,
+  FiTrash2, FiStar,
+} from 'react-icons/fi';
 import { filesApi } from '../services/api';
-import { FileItem } from '../types';
+import { FileItem, FavoriteEntry } from '../types';
 import toast from 'react-hot-toast';
 
 interface SidebarProps {
@@ -14,6 +17,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [folders, setFolders] = useState<FileItem[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -22,6 +26,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     filesApi.list({ sortBy: 'name', sortOrder: 'asc' }).then(files => {
       setFolders(files.filter(f => f.isFolder));
     }).catch(() => {});
+    filesApi.favorites().then(setFavorites).catch(() => {});
   }, [location.pathname]);
 
   const currentFolderId = location.pathname.startsWith('/folder/')
@@ -44,6 +49,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
   const navItems = [
     { icon: FiHome, label: 'My Files', path: '/', active: location.pathname === '/' },
+    { icon: FiStar, label: 'Favorites', path: '/favorites', active: location.pathname === '/favorites' },
+    { icon: FiTrash2, label: 'Trash', path: '/trash', active: location.pathname === '/trash' },
     { icon: FiShare2, label: 'Shared Links', path: '/shares', active: location.pathname === '/shares' },
     { icon: FiUser, label: 'Profile', path: '/profile', active: location.pathname === '/profile' },
   ];
@@ -61,7 +68,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
         {navItems.map((item) => (
           <button
             key={item.path}
-            onClick={() => navigate(item.path)}
+            onClick={() => { navigate(item.path); onClose(); }}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
               item.active
                 ? 'glass text-cyan shadow-sm'
@@ -117,6 +124,24 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
         {folders.length === 0 && !showNewFolder && (
           <p className="text-xs text-white/20 px-3 py-2">No folders yet</p>
+        )}
+
+        {favorites.length > 0 && (
+          <>
+            <div className="pt-4 pb-2">
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider px-3">Favorites</span>
+            </div>
+            {favorites.map(fav => fav.item && (
+              <button
+                key={fav.id}
+                onClick={() => fav.item!.isFolder ? navigate(`/folder/${fav.item!.id}`) : fav.item!.folderId ? navigate(`/folder/${fav.item!.folderId}`) : navigate('/')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all text-white/50 hover:text-white hover:bg-white/5`}
+              >
+                <FiStar size={14} className="text-yellow/80" />
+                <span className="truncate">{fav.item.originalName}</span>
+              </button>
+            ))}
+          </>
         )}
       </nav>
 

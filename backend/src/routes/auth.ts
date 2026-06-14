@@ -8,7 +8,15 @@ import { User, UserPublic } from '../types';
 const router = Router();
 
 function toPublic(u: User): UserPublic {
-  return { id: u.id, username: u.username, email: u.email, displayName: u.displayName || '', createdAt: u.createdAt };
+  return {
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    displayName: u.displayName || '',
+    storageQuotaBytes: u.storageQuotaBytes || 3221225472,
+    usedStorageBytes: u.usedStorageBytes || 0,
+    createdAt: u.createdAt,
+  };
 }
 
 router.post('/register', (req: Request, res: Response) => {
@@ -41,7 +49,7 @@ router.post('/register', (req: Request, res: Response) => {
 
   res.status(201).json({
     token,
-    user: { id, username, email, displayName: '', createdAt },
+    user: { id, username, email, displayName: '', storageQuotaBytes: 3221225472, usedStorageBytes: 0, createdAt },
   });
 });
 

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUpload, FiFile, FiX, FiCheck } from 'react-icons/fi';
+import { FiUpload, FiFile, FiX, FiCheck, FiHardDrive } from 'react-icons/fi';
 import { filesApi } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -20,8 +20,22 @@ interface UploadFile {
 export default function UploadZone({ folderId, onUploadComplete }: UploadZoneProps) {
   const [uploads, setUploads] = useState<UploadFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
 
-  const onDrop = useCallback((accepted: File[]) => {
+  const onDrop = useCallback(async (accepted: File[]) => {
+    const totalSize = accepted.reduce((sum, f) => sum + f.size, 0);
+    try {
+      const quota = await filesApi.getQuota();
+      if (totalSize > quota.remaining) {
+        setQuotaExceeded(true);
+        toast.error(`Storage quota would be exceeded. Need ${(totalSize / 1024 / 1024).toFixed(1)}MB but only ${(quota.remaining / 1024 / 1024).toFixed(1)}MB remaining`);
+        return;
+      }
+    } catch {
+      // proceed anyway if quota check fails
+    }
+    setQuotaExceeded(false);
+
     const newUploads = accepted.map(f => ({ file: f, progress: 0, status: 'pending' as const }));
     setUploads(prev => [...prev, ...newUploads]);
 
@@ -41,7 +55,7 @@ export default function UploadZone({ folderId, onUploadComplete }: UploadZonePro
           setUploads(prev => prev.map((u, i) =>
             i === actualIdx ? { ...u, status: 'error', error: err.response?.data?.error || err.message } : u
           ));
-          toast.error(`Failed to upload ${upload.file.name}`);
+          toast.error(`Failed to upload ${upload.file.name}: ${err.response?.data?.error || err.message}`);
         });
     });
   }, [folderId, onUploadComplete, uploads.length]);
@@ -59,7 +73,8 @@ export default function UploadZone({ folderId, onUploadComplete }: UploadZonePro
       <div
         {...getRootProps()}
         className={`relative overflow-hidden rounded-2xl border-2 border-dashed transition-all cursor-pointer
-          ${isDragActive || isDragOver
+          ${quotaExceeded ? 'border-coral bg-coral/5' :
+            isDragActive || isDragOver
             ? 'border-cyan bg-cyan/5 neon-glow'
             : 'border-white/10 hover:border-cyan/30 hover:bg-white/5'
           }`}
@@ -78,6 +93,13 @@ export default function UploadZone({ folderId, onUploadComplete }: UploadZonePro
           <p className="text-sm text-white/40 mt-1">or click to browse</p>
         </div>
       </div>
+
+      {quotaExceeded && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-coral/10 text-coral text-sm">
+          <FiHardDrive size={16} />
+          <span>Storage quota exceeded. Free up space or upload fewer files.</span>
+        </div>
+      )}
 
       <AnimatePresence>
         {uploads.length > 0 && (

@@ -4,6 +4,8 @@ export interface User {
   email: string;
   passwordHash: string;
   displayName: string;
+  storageQuotaBytes: number;
+  usedStorageBytes: number;
   createdAt: string;
 }
 
@@ -12,6 +14,8 @@ export interface UserPublic {
   username: string;
   email: string;
   displayName: string;
+  storageQuotaBytes: number;
+  usedStorageBytes: number;
   createdAt: string;
 }
 
@@ -25,8 +29,25 @@ export interface FileEntry {
   folderId: string | null;
   userId: string;
   isFolder: boolean;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FavoriteEntry {
+  id: string;
+  userId: string;
+  itemId: string;
+  createdAt: string;
+  item?: FileEntry;
+}
+
+export interface FileQuery {
+  folderId?: string;
+  search?: string;
+  type?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface ShareLink {
@@ -50,12 +71,4 @@ export interface Folder {
 export interface JwtPayload {
   userId: string;
   username: string;
-}
-
-export interface FileQuery {
-  folderId?: string;
-  search?: string;
-  type?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
 }

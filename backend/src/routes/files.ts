@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import archiver from 'archiver';
 import AdmZip from 'adm-zip';
-import db from '../database';
+import db, { checkQuota, recalculateUsedStorage } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { upload, UPLOAD_DIR_PATH } from '../middleware/upload';
 import { FileEntry } from '../types';
@@ -17,7 +17,7 @@ router.get('/', (req: Request, res: Response) => {
   const { folderId, search, type, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
   const userId = req.user!.userId;
 
-  let sql = 'SELECT * FROM files WHERE userId = ?';
+  let sql = 'SELECT * FROM files WHERE userId = ? AND deletedAt IS NULL';
   const params: any[] = [userId];
 
   if (folderId) {
@@ -47,10 +47,159 @@ router.get('/', (req: Request, res: Response) => {
   res.json(files);
 });
 
+router.get('/trash', (req: Request, res: Response) => {
+  const { sortBy = 'deletedAt', sortOrder = 'desc' } = req.query;
+  const userId = req.user!.userId;
+
+  const allowedSortFields = ['name', 'size', 'deletedAt', 'createdAt'];
+  const sortField = allowedSortFields.includes(sortBy as string) ? sortBy : 'deletedAt';
+  const order = sortOrder === 'asc' ? 'ASC' : 'DESC';
+
+  const files = db.prepare(
+    `SELECT * FROM files WHERE userId = ? AND deletedAt IS NOT NULL ORDER BY isFolder DESC, ${sortField} ${order}`
+  ).all(userId);
+
+  res.json(files);
+});
+
+router.post('/trash/purge-old', (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const oldFiles = db.prepare(
+    'SELECT * FROM files WHERE userId = ? AND deletedAt IS NOT NULL AND deletedAt < ?'
+  ).all(userId, cutoff) as FileEntry[];
+
+  for (const file of oldFiles) {
+    if (!file.isFolder && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+    if (file.isFolder) {
+      const descendants = db.prepare(
+        "SELECT * FROM files WHERE folderId = ? AND userId = ?"
+      ).all(file.id, userId) as FileEntry[];
+      for (const d of descendants) {
+        if (!d.isFolder && fs.existsSync(d.path)) fs.unlinkSync(d.path);
+      }
+      db.prepare("DELETE FROM files WHERE folderId = ? AND userId = ?").run(file.id, userId);
+    }
+    db.prepare('DELETE FROM files WHERE id = ? AND userId = ?').run(file.id, userId);
+  }
+
+  recalculateUsedStorage(userId);
+  res.json({ message: `Purged ${oldFiles.length} old items from trash` });
+});
+
+router.post('/trash/purge', (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+
+  const trashFiles = db.prepare(
+    'SELECT * FROM files WHERE userId = ? AND deletedAt IS NOT NULL'
+  ).all(userId) as FileEntry[];
+
+  for (const file of trashFiles) {
+    if (!file.isFolder && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+    if (file.isFolder) {
+      const descendants = db.prepare(
+        "SELECT * FROM files WHERE folderId = ? AND userId = ?"
+      ).all(file.id, userId) as FileEntry[];
+      for (const d of descendants) {
+        if (!d.isFolder && fs.existsSync(d.path)) fs.unlinkSync(d.path);
+      }
+      db.prepare("DELETE FROM files WHERE folderId = ? AND userId = ?").run(file.id, userId);
+    }
+    db.prepare('DELETE FROM files WHERE id = ? AND userId = ?').run(file.id, userId);
+  }
+
+  recalculateUsedStorage(userId);
+  res.json({ message: `Trash emptied (${trashFiles.length} items)` });
+});
+
+router.get('/search', (req: Request, res: Response) => {
+  const { q, type } = req.query;
+  const userId = req.user!.userId;
+
+  if (!q) {
+    res.json([]);
+    return;
+  }
+
+  let sql = `SELECT * FROM files WHERE userId = ? AND deletedAt IS NULL AND (name LIKE ? OR originalName LIKE ?)`;
+  const params: any[] = [userId, `%${q}%`, `%${q}%`];
+
+  if (type) {
+    sql += ' AND mimeType LIKE ?';
+    params.push(`${type}%`);
+  }
+
+  sql += ' ORDER BY isFolder DESC, createdAt DESC LIMIT 100';
+
+  const files = db.prepare(sql).all(...params) as FileEntry[];
+
+  const results = files.map(f => {
+    const breadcrumb: { id: string; name: string }[] = [];
+    let current = f.folderId;
+    while (current) {
+      const parent = db.prepare('SELECT id, name FROM files WHERE id = ? AND userId = ?').get(current, userId) as any;
+      if (!parent) break;
+      breadcrumb.unshift({ id: parent.id, name: parent.name });
+      current = parent.folderId;
+    }
+    return { ...f, parentPath: breadcrumb };
+  });
+
+  res.json(results);
+});
+
+router.get('/breadcrumb', (req: Request, res: Response) => {
+  const { folderId } = req.query;
+  const userId = req.user!.userId;
+
+  const breadcrumb: { id: string; name: string }[] = [];
+  let current = folderId as string | null;
+
+  while (current) {
+    const folder = db.prepare(
+      'SELECT id, name FROM files WHERE id = ? AND userId = ? AND isFolder = ?'
+    ).get(current, userId, 1) as any;
+    if (!folder) break;
+    breadcrumb.unshift({ id: folder.id, name: folder.name });
+    current = folder.folderId;
+  }
+
+  res.json(breadcrumb);
+});
+
+router.get('/favorites', (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+
+  const favorites = db.prepare(`
+    SELECT f.* FROM favorites f
+    JOIN files fi ON f.itemId = fi.id
+    WHERE f.userId = ? AND fi.deletedAt IS NULL
+    ORDER BY f.createdAt DESC
+  `).all(userId) as any[];
+
+  const items = favorites.map(fav => {
+    const item = db.prepare('SELECT * FROM files WHERE id = ?').get(fav.itemId) as FileEntry | undefined;
+    return { ...fav, item: item || null };
+  }).filter(f => f.item !== null);
+
+  res.json(items);
+});
+
+router.get('/quota', (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const q = checkQuota(userId, 0);
+  res.json({ used: q.used, quota: q.quota, remaining: q.remaining, percent: Math.round((q.used / q.quota) * 100) });
+});
+
 router.get('/all-folders', (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const folders = db.prepare(
-    'SELECT id, name, folderId as parentId FROM files WHERE userId = ? AND isFolder = 1 ORDER BY name'
+    "SELECT id, name, folderId as parentId FROM files WHERE userId = ? AND isFolder = 1 AND deletedAt IS NULL ORDER BY name"
   ).all(userId);
   res.json(folders);
 });
@@ -63,8 +212,15 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 
   const { folderId } = req.body;
   const userId = req.user!.userId;
-  const id = uuidv4();
 
+  const q = checkQuota(userId, req.file.size);
+  if (!q.allowed) {
+    fs.unlinkSync(req.file.path);
+    res.status(403).json({ error: `Storage quota exceeded. ${q.remaining} bytes remaining` });
+    return;
+  }
+
+  const id = uuidv4();
   const file = req.file;
   const fileEntry = {
     id,
@@ -85,6 +241,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, fileEntry.name, fileEntry.originalName, fileEntry.mimeType, fileEntry.size, fileEntry.path, fileEntry.folderId, fileEntry.userId, 0, fileEntry.createdAt, fileEntry.updatedAt);
 
+  recalculateUsedStorage(userId);
   res.status(201).json(fileEntry);
 });
 
@@ -118,6 +275,13 @@ router.post('/create', (req: Request, res: Response) => {
     return;
   }
 
+  const byteLen = Buffer.byteLength(content || '', 'utf-8');
+  const q = checkQuota(userId, byteLen);
+  if (!q.allowed) {
+    res.status(403).json({ error: `Storage quota exceeded. ${q.remaining} bytes remaining` });
+    return;
+  }
+
   const id = uuidv4();
   const userDir = path.join(UPLOAD_DIR_PATH, userId);
   if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
@@ -146,8 +310,9 @@ router.post('/create', (req: Request, res: Response) => {
   db.prepare(`
     INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, safeName, name, mimeType, Buffer.byteLength(content || '', 'utf-8'), filePath, folderId || null, userId, 0, now, now);
+  `).run(id, safeName, name, mimeType, byteLen, filePath, folderId || null, userId, 0, now, now);
 
+  recalculateUsedStorage(userId);
   const created = db.prepare('SELECT * FROM files WHERE id = ?').get(id);
   res.status(201).json(created);
 });
@@ -156,7 +321,7 @@ router.get('/:id/content', (req: Request, res: Response) => {
   const { id } = req.params;
   const userId = req.user!.userId;
 
-  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
   if (!file || file.isFolder) {
     res.status(404).json({ error: 'File not found' });
     return;
@@ -181,17 +346,28 @@ router.put('/:id/content', (req: Request, res: Response) => {
     return;
   }
 
-  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
   if (!file || file.isFolder) {
     res.status(404).json({ error: 'File not found' });
     return;
   }
 
+  const newSize = Buffer.byteLength(content, 'utf-8');
+  const sizeDiff = newSize - file.size;
+  if (sizeDiff > 0) {
+    const q = checkQuota(userId, sizeDiff);
+    if (!q.allowed) {
+      res.status(403).json({ error: `Storage quota exceeded. ${q.remaining} bytes remaining` });
+      return;
+    }
+  }
+
   fs.writeFileSync(file.path, content, 'utf-8');
   const updatedAt = new Date().toISOString();
   db.prepare('UPDATE files SET size = ?, updatedAt = ? WHERE id = ?')
-    .run(Buffer.byteLength(content, 'utf-8'), updatedAt, id);
+    .run(newSize, updatedAt, id);
 
+  recalculateUsedStorage(userId);
   const updated = db.prepare('SELECT * FROM files WHERE id = ?').get(id);
   res.json(updated);
 });
@@ -206,7 +382,7 @@ router.put('/:id/rename', (req: Request, res: Response) => {
     return;
   }
 
-  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
   if (!file) {
     res.status(404).json({ error: 'File not found' });
     return;
@@ -235,7 +411,94 @@ router.put('/:id/rename', (req: Request, res: Response) => {
   res.json(updated);
 });
 
+function softDeleteEntry(id: string, userId: string, deletedAt: string): void {
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  if (!file) return;
+
+  db.prepare('UPDATE files SET deletedAt = ? WHERE id = ? AND userId = ?').run(deletedAt, id, userId);
+
+  if (file.isFolder) {
+    const children = db.prepare('SELECT * FROM files WHERE folderId = ? AND userId = ?').all(id, userId) as FileEntry[];
+    for (const child of children) {
+      softDeleteEntry(child.id, userId, deletedAt);
+    }
+  }
+}
+
+function restoreEntry(id: string, userId: string): void {
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  if (!file) return;
+
+  db.prepare('UPDATE files SET deletedAt = NULL WHERE id = ? AND userId = ?').run(id, userId);
+
+  if (file.isFolder) {
+    const children = db.prepare('SELECT * FROM files WHERE folderId = ? AND userId = ?').all(id, userId) as FileEntry[];
+    for (const child of children) {
+      restoreEntry(child.id, userId);
+    }
+  }
+}
+
 router.delete('/:id', (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const userId = req.user!.userId;
+
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
+  if (!file) {
+    res.status(404).json({ error: 'File not found' });
+    return;
+  }
+
+  const deletedAt = new Date().toISOString();
+  softDeleteEntry(id, userId, deletedAt);
+
+  recalculateUsedStorage(userId);
+  res.json({ message: 'File moved to trash', deletedAt });
+});
+
+router.post('/:id/restore', (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const userId = req.user!.userId;
+
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NOT NULL').get(id, userId) as FileEntry | undefined;
+  if (!file) {
+    res.status(404).json({ error: 'File not found in trash' });
+    return;
+  }
+
+  restoreEntry(id, userId);
+  recalculateUsedStorage(userId);
+  res.json({ message: 'File restored' });
+});
+
+router.delete('/:id/permanent', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user!.userId;
+
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NOT NULL').get(id, userId) as FileEntry | undefined;
+  if (!file) {
+    res.status(404).json({ error: 'File not found in trash' });
+    return;
+  }
+
+  if (file.isFolder) {
+    const descendants = db.prepare('SELECT * FROM files WHERE folderId = ? AND userId = ?').all(id, userId) as FileEntry[];
+    for (const d of descendants) {
+      if (!d.isFolder && fs.existsSync(d.path)) fs.unlinkSync(d.path);
+    }
+    db.prepare("DELETE FROM files WHERE folderId = ? AND userId = ?").run(id, userId);
+  }
+
+  if (!file.isFolder && fs.existsSync(file.path)) {
+    fs.unlinkSync(file.path);
+  }
+  db.prepare('DELETE FROM files WHERE id = ? AND userId = ?').run(id, userId);
+
+  recalculateUsedStorage(userId);
+  res.json({ message: 'File permanently deleted' });
+});
+
+router.post('/:id/favorite', (req: Request, res: Response) => {
   const { id } = req.params;
   const userId = req.user!.userId;
 
@@ -245,29 +508,22 @@ router.delete('/:id', (req: Request, res: Response) => {
     return;
   }
 
-  if (file.isFolder) {
-    const children = db.prepare('SELECT * FROM files WHERE folderId = ?').all(id) as FileEntry[];
-    for (const child of children) {
-      if (!child.isFolder && fs.existsSync(child.path)) {
-        fs.unlinkSync(child.path);
-      }
-    }
-    db.prepare('DELETE FROM files WHERE folderId = ?').run(id);
+  const existing = db.prepare('SELECT id FROM favorites WHERE userId = ? AND itemId = ?').get(userId, id);
+  if (existing) {
+    db.prepare('DELETE FROM favorites WHERE userId = ? AND itemId = ?').run(userId, id);
+    res.json({ favorited: false });
+  } else {
+    const favId = uuidv4();
+    db.prepare('INSERT INTO favorites (id, userId, itemId) VALUES (?, ?, ?)').run(favId, userId, id);
+    res.json({ favorited: true });
   }
-
-  if (!file.isFolder && fs.existsSync(file.path)) {
-    fs.unlinkSync(file.path);
-  }
-
-  db.prepare('DELETE FROM files WHERE id = ?').run(id);
-  res.json({ message: 'File deleted successfully' });
 });
 
 router.get('/:id/download', (req: Request, res: Response) => {
   const { id } = req.params;
   const userId = req.user!.userId;
 
-  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
   if (!file || file.isFolder) {
     res.status(404).json({ error: 'File not found' });
     return;
@@ -285,7 +541,7 @@ router.get('/:id/download-zip', (req: Request, res: Response) => {
   const { id } = req.params;
   const userId = req.user!.userId;
 
-  const folder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ?')
+  const folder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ? AND deletedAt IS NULL')
     .get(id, userId, 1) as FileEntry | undefined;
 
   if (!folder) {
@@ -300,7 +556,7 @@ router.get('/:id/download-zip', (req: Request, res: Response) => {
   archive.pipe(res);
 
   const rootEntries = db.prepare(
-    'SELECT * FROM files WHERE folderId = ? AND userId = ?'
+    'SELECT * FROM files WHERE folderId = ? AND userId = ? AND deletedAt IS NULL'
   ).all(id, userId) as FileEntry[];
 
   for (const entry of rootEntries) {
@@ -318,7 +574,7 @@ router.get('/:id/preview', (req: Request, res: Response) => {
   const { id } = req.params;
   const userId = req.user!.userId;
 
-  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
   if (!file || file.isFolder) {
     res.status(404).json({ error: 'File not found' });
     return;
@@ -355,7 +611,7 @@ router.put('/:id/move', (req: Request, res: Response) => {
   const { folderId } = req.body;
   const userId = req.user!.userId;
 
-  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
   if (!file) {
     res.status(404).json({ error: 'File not found' });
     return;
@@ -366,7 +622,7 @@ router.put('/:id/move', (req: Request, res: Response) => {
       res.status(400).json({ error: 'Cannot move into itself' });
       return;
     }
-    const targetFolder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ?')
+    const targetFolder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ? AND deletedAt IS NULL')
       .get(folderId, userId, 1);
     if (!targetFolder) {
       res.status(404).json({ error: 'Target folder not found' });
@@ -386,7 +642,7 @@ router.get('/:id/details', (req: Request, res: Response) => {
   const { id } = req.params;
   const userId = req.user!.userId;
 
-  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
   if (!file) {
     res.status(404).json({ error: 'File or folder not found' });
     return;
@@ -394,7 +650,7 @@ router.get('/:id/details', (req: Request, res: Response) => {
 
   let itemCount = 0;
   if (file.isFolder) {
-    const result = db.prepare('SELECT COUNT(*) as count FROM files WHERE folderId = ?').get(id) as any;
+    const result = db.prepare('SELECT COUNT(*) as count FROM files WHERE folderId = ? AND deletedAt IS NULL').get(id) as any;
     itemCount = result.count;
   }
 
@@ -406,7 +662,7 @@ router.get('/:id/details', (req: Request, res: Response) => {
 
 function addFilesToArchive(folderId: string, archivePath: string, userId: string, archive: archiver.Archiver) {
   const entries = db.prepare(
-    'SELECT * FROM files WHERE folderId = ? AND userId = ?'
+    'SELECT * FROM files WHERE folderId = ? AND userId = ? AND deletedAt IS NULL'
   ).all(folderId, userId) as FileEntry[];
 
   for (const entry of entries) {
@@ -429,7 +685,7 @@ router.post('/batch/zip', (req: Request, res: Response) => {
 
   const placeholders = ids.map(() => '?').join(',');
   const entries = db.prepare(
-    `SELECT * FROM files WHERE id IN (${placeholders}) AND userId = ?`
+    `SELECT * FROM files WHERE id IN (${placeholders}) AND userId = ? AND deletedAt IS NULL`
   ).all(...ids, userId) as FileEntry[];
 
   const archive = archiver('zip', { zlib: { level: 9 } });
@@ -461,7 +717,7 @@ router.post('/batch/save-zip', (req: Request, res: Response) => {
 
   const placeholders = ids.map(() => '?').join(',');
   const entries = db.prepare(
-    `SELECT * FROM files WHERE id IN (${placeholders}) AND userId = ?`
+    `SELECT * FROM files WHERE id IN (${placeholders}) AND userId = ? AND deletedAt IS NULL`
   ).all(...ids, userId) as FileEntry[];
 
   const name = (zipName || 'batch-export').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -504,6 +760,7 @@ router.post('/batch/save-zip', (req: Request, res: Response) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(zipFile.id, zipFile.name, zipFile.originalName, zipFile.mimeType, zipFile.size, zipFile.path, zipFile.folderId, zipFile.userId, 0, zipFile.createdAt, zipFile.updatedAt);
 
+    recalculateUsedStorage(userId);
     res.status(201).json(zipFile);
   });
 
@@ -523,28 +780,18 @@ router.post('/batch/delete', (req: Request, res: Response) => {
     return;
   }
 
+  const deletedAt = new Date().toISOString();
   const placeholders = ids.map(() => '?').join(',');
   const entries = db.prepare(
-    `SELECT * FROM files WHERE id IN (${placeholders}) AND userId = ?`
+    `SELECT * FROM files WHERE id IN (${placeholders}) AND userId = ? AND deletedAt IS NULL`
   ).all(...ids, userId) as FileEntry[];
 
   for (const entry of entries) {
-    if (entry.isFolder) {
-      const children = db.prepare('SELECT * FROM files WHERE folderId = ?').all(entry.id) as FileEntry[];
-      for (const child of children) {
-        if (!child.isFolder && fs.existsSync(child.path)) fs.unlinkSync(child.path);
-      }
-      db.prepare('DELETE FROM files WHERE folderId = ?').run(entry.id);
-    }
-    if (!entry.isFolder && fs.existsSync(entry.path)) {
-      fs.unlinkSync(entry.path);
-    }
+    softDeleteEntry(entry.id, userId, deletedAt);
   }
 
-  const deletePlaceholders = ids.map(() => '?').join(',');
-  db.prepare(`DELETE FROM files WHERE id IN (${deletePlaceholders}) AND userId = ?`).run(...ids, userId);
-
-  res.json({ message: `${entries.length} items deleted successfully` });
+  recalculateUsedStorage(userId);
+  res.json({ message: `${entries.length} items moved to trash` });
 });
 
 router.post('/batch/move', (req: Request, res: Response) => {
@@ -557,7 +804,7 @@ router.post('/batch/move', (req: Request, res: Response) => {
   }
 
   if (folderId) {
-    const targetFolder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ?')
+    const targetFolder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ? AND deletedAt IS NULL')
       .get(folderId, userId, 1);
     if (!targetFolder) {
       res.status(404).json({ error: 'Target folder not found' });
@@ -568,15 +815,19 @@ router.post('/batch/move', (req: Request, res: Response) => {
   const updatedAt = new Date().toISOString();
   const placeholders = ids.map(() => '?').join(',');
   db.prepare(
-    `UPDATE files SET folderId = ?, updatedAt = ? WHERE id IN (${placeholders}) AND userId = ?`
+    `UPDATE files SET folderId = ?, updatedAt = ? WHERE id IN (${placeholders}) AND userId = ? AND deletedAt IS NULL`
   ).run(folderId || null, updatedAt, ...ids, userId);
 
   res.json({ message: `${ids.length} items moved successfully` });
 });
 
 function deepCopyEntry(entryId: string, destFolderId: string | null, userId: string): void {
-  const entry = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(entryId, userId) as FileEntry | undefined;
+  const entry = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(entryId, userId) as FileEntry | undefined;
   if (!entry) return;
+
+  const newEntrySize = entry.isFolder ? 0 : entry.size;
+  const q = checkQuota(userId, newEntrySize);
+  if (!q.allowed) return;
 
   const newId = uuidv4();
   const now = new Date().toISOString();
@@ -587,7 +838,7 @@ function deepCopyEntry(entryId: string, destFolderId: string | null, userId: str
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(newId, entry.name, entry.name, 'application/folder', 0, '', destFolderId, userId, 1, now, now);
 
-    const children = db.prepare('SELECT * FROM files WHERE folderId = ? AND userId = ?').all(entryId, userId) as FileEntry[];
+    const children = db.prepare('SELECT * FROM files WHERE folderId = ? AND userId = ? AND deletedAt IS NULL').all(entryId, userId) as FileEntry[];
     for (const child of children) {
       deepCopyEntry(child.id, newId, userId);
     }
@@ -619,7 +870,7 @@ router.post('/batch/copy', (req: Request, res: Response) => {
   }
 
   if (folderId) {
-    const targetFolder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ?')
+    const targetFolder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ? AND deletedAt IS NULL')
       .get(folderId, userId, 1);
     if (!targetFolder) {
       res.status(404).json({ error: 'Target folder not found' });
@@ -631,6 +882,7 @@ router.post('/batch/copy', (req: Request, res: Response) => {
     deepCopyEntry(id, folderId || null, userId);
   }
 
+  recalculateUsedStorage(userId);
   res.json({ message: `${ids.length} items copied successfully` });
 });
 
@@ -639,7 +891,7 @@ router.post('/:id/extract', (req: Request, res: Response) => {
   const { destFolderId } = req.body;
   const userId = req.user!.userId;
 
-  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ?').get(id, userId) as FileEntry | undefined;
+  const file = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
   if (!file || file.isFolder) {
     res.status(404).json({ error: 'File not found' });
     return;
@@ -704,6 +956,7 @@ router.post('/:id/extract', (req: Request, res: Response) => {
       }
     }
 
+    recalculateUsedStorage(userId);
     res.json({ message: `Extracted ${entries.length} entries`, files: created });
   } catch (err: any) {
     res.status(500).json({ error: `Extraction failed: ${err.message}` });

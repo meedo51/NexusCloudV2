@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   FiFile, FiFolder, FiImage, FiFileText, FiDownload,
   FiTrash2, FiEdit2, FiShare2, FiInfo, FiMove, FiEye,
-  FiArchive, FiCheckSquare, FiSquare, FiUnlock,
+  FiArchive, FiCheckSquare, FiSquare, FiUnlock, FiStar,
 } from 'react-icons/fi';
 import { FileItem } from '../types';
 import { filesApi } from '../services/api';
@@ -50,9 +50,10 @@ interface FileCardProps {
   selected?: boolean;
   onSelect?: (id: string, ctrl?: boolean) => void;
   selectionMode?: boolean;
+  favorited?: boolean;
 }
 
-export default function FileCard({ file, viewMode, onRefresh, onClick, selected, onSelect, selectionMode }: FileCardProps) {
+export default function FileCard({ file, viewMode, onRefresh, onClick, selected, onSelect, selectionMode, favorited }: FileCardProps) {
   const [showShare, setShowShare] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showMove, setShowMove] = useState(false);
@@ -62,6 +63,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
   const [isDeleting, setIsDeleting] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isFav, setIsFav] = useState(favorited || false);
 
   const Icon = getFileIcon(file.mimeType);
   const isImage = file.mimeType.startsWith('image/');
@@ -89,7 +91,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
     setIsDeleting(true);
     try {
       await filesApi.delete(file.id);
-      toast.success('Deleted');
+      toast.success('Moved to trash');
       onRefresh();
     } catch {
       toast.error('Failed to delete');
@@ -136,6 +138,17 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
       toast.error(err.response?.data?.error || 'Extraction failed');
     }
     setIsExtracting(false);
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await filesApi.toggleFavorite(file.id);
+      setIsFav(res.favorited);
+      toast.success(res.favorited ? 'Added to favorites' : 'Removed from favorites');
+    } catch {
+      toast.error('Failed to update favorite');
+    }
   };
 
   const handleClick = () => {
@@ -187,8 +200,15 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
           <Icon size={48} className={file.isFolder ? 'text-cyan/60' : 'text-white/30'} />
         )}
 
+        <button
+          onClick={handleToggleFavorite}
+          className="absolute top-2 left-2 z-10 p-1.5 rounded-lg bg-space/60 hover:bg-space/80 transition-colors"
+        >
+          <FiStar size={14} className={isFav ? 'text-yellow fill-yellow' : 'text-white/40'} />
+        </button>
+
         {selectionMode && (
-          <div className="absolute top-2 left-2 z-10" onClick={e => e.stopPropagation()}>
+          <div className="absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
             {selected ? <FiCheckSquare size={20} className="text-cyan" /> : <FiSquare size={20} className="text-white/40" />}
           </div>
         )}
@@ -256,6 +276,9 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
               {selected ? <FiCheckSquare size={18} className="text-cyan" /> : <FiSquare size={18} className="text-white/30" />}
             </div>
           )}
+          <button onClick={handleToggleFavorite} className="p-1 flex-shrink-0">
+            <FiStar size={14} className={isFav ? 'text-yellow fill-yellow' : 'text-white/20 hover:text-white/40'} />
+          </button>
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
             ${file.isFolder ? 'bg-cyan/10 text-cyan' : isImage ? 'bg-coral/10 text-coral' : 'bg-white/5 text-white/60'}`}>
             {isImage && file.path ? (

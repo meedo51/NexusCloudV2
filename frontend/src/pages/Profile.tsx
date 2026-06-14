@@ -1,9 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiUser, FiMail, FiLock, FiSave, FiAtSign, FiEye, FiEyeOff } from 'react-icons/fi';
-import { authApi } from '../services/api';
+import {
+  FiUser, FiMail, FiLock, FiSave, FiAtSign, FiEye, FiEyeOff,
+  FiHardDrive, FiAlertTriangle,
+} from 'react-icons/fi';
+import { authApi, filesApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { QuotaInfo } from '../types';
 import toast from 'react-hot-toast';
+
+function formatSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
 
 function Profile() {
   const { user, login } = useAuth();
@@ -14,6 +26,11 @@ function Profile() {
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+
+  useEffect(() => {
+    filesApi.getQuota().then(setQuota).catch(() => {});
+  }, []);
 
   const handleProfileSave = async () => {
     setSaving(true);
@@ -50,6 +67,9 @@ function Profile() {
     setSaving(false);
   };
 
+  const quotaPercent = quota?.percent ?? 0;
+  const quotaColor = quotaPercent > 90 ? 'bg-coral' : quotaPercent > 70 ? 'text-yellow' : 'bg-cyan';
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -72,6 +92,35 @@ function Profile() {
             <p className="text-sm text-white/40">{email}</p>
           </div>
         </div>
+
+        {quota && (
+          <div className="mb-6 p-4 rounded-xl bg-white/5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <FiHardDrive size={14} className="text-cyan" />
+                <span className="text-sm font-medium">Storage</span>
+              </div>
+              <span className="text-xs text-white/40">
+                {formatSize(quota.used)} / {formatSize(quota.quota)}
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(quotaPercent, 100)}%` }}
+                className={`h-full rounded-full ${quotaColor}`}
+              />
+            </div>
+            {quotaPercent > 90 && (
+              <p className="flex items-center gap-1 text-xs text-coral mt-1">
+                <FiAlertTriangle size={12} /> Storage almost full
+              </p>
+            )}
+            {quotaPercent <= 90 && (
+              <p className="text-xs text-white/30 mt-1">{quota.remaining > 0 ? `${formatSize(quota.remaining)} remaining` : 'Full'}</p>
+            )}
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>

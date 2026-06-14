@@ -1,5 +1,5 @@
 import axios, { AxiosProgressEvent } from 'axios';
-import { AuthResponse, FileItem, ShareLink, ShareAccessResponse, FileContent } from '../types';
+import { AuthResponse, FileItem, ShareLink, ShareAccessResponse, FileContent, QuotaInfo, FavoriteEntry, BreadcrumbItem } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -90,6 +90,26 @@ export const filesApi = {
     api.post('/files/batch/move', { ids, folderId }).then(r => r.data),
   batchCopy: (ids: string[], folderId: string | null) =>
     api.post('/files/batch/copy', { ids, folderId }).then(r => r.data),
+  trash: (params?: { sortBy?: string; sortOrder?: string }) =>
+    api.get<FileItem[]>('/files/trash', { params }).then(r => r.data),
+  restore: (id: string) =>
+    api.post(`/files/${id}/restore`).then(r => r.data),
+  deletePermanent: (id: string) =>
+    api.delete(`/files/${id}/permanent`).then(r => r.data),
+  purgeTrash: () =>
+    api.post('/files/trash/purge').then(r => r.data),
+  purgeOldTrash: () =>
+    api.post('/files/trash/purge-old').then(r => r.data),
+  search: (q: string, type?: string) =>
+    api.get<FileItem[]>('/files/search', { params: { q, type } }).then(r => r.data),
+  breadcrumb: (folderId?: string) =>
+    api.get<BreadcrumbItem[]>('/files/breadcrumb', { params: { folderId } }).then(r => r.data),
+  favorites: () =>
+    api.get<FavoriteEntry[]>('/files/favorites').then(r => r.data),
+  toggleFavorite: (id: string) =>
+    api.post<{ favorited: boolean }>(`/files/${id}/favorite`).then(r => r.data),
+  getQuota: () =>
+    api.get<QuotaInfo>('/files/quota').then(r => r.data),
 };
 
 const publicApi = axios.create({

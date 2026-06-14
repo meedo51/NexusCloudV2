@@ -8,6 +8,9 @@ import SharedFile from './pages/SharedFile';
 import ShareManage from './pages/ShareManage';
 import Profile from './pages/Profile';
 import FileEditor from './pages/FileEditor';
+import Trash from './pages/Trash';
+import SearchResults from './pages/SearchResults';
+import FavoritesPage from './pages/FavoritesPage';
 import LoadingScreen from './components/LoadingScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -35,6 +38,9 @@ export default function App() {
         <Route path="folder/:folderId" element={<Dashboard />} />
         <Route path="shares" element={<ShareManage />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="trash" element={<Trash />} />
+        <Route path="favorites" element={<FavoritesPage />} />
+        <Route path="search" element={<SearchResults />} />
         <Route path="editor" element={<FileEditor />} />
         <Route path="editor/:fileId" element={<FileEditor />} />
       </Route>

@@ -3,6 +3,8 @@ export interface User {
   username: string;
   email: string;
   displayName: string;
+  storageQuotaBytes: number;
+  usedStorageBytes: number;
   createdAt: string;
 }
 
@@ -16,13 +18,29 @@ export interface FileItem {
   folderId: string | null;
   userId: string;
   isFolder: boolean;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  parentPath?: { id: string; name: string }[];
+  itemCount?: number;
 }
 
 export interface FileContent {
   content: string;
   mimeType: string;
+  name: string;
+}
+
+export interface FavoriteEntry {
+  id: string;
+  userId: string;
+  itemId: string;
+  createdAt: string;
+  item: FileItem | null;
+}
+
+export interface BreadcrumbItem {
+  id: string;
   name: string;
 }
 
@@ -62,4 +80,11 @@ export interface FolderTreeItem {
   name: string;
   parentId: string | null;
   children: FolderTreeItem[];
+}
+
+export interface QuotaInfo {
+  used: number;
+  quota: number;
+  remaining: number;
+  percent: number;
 }

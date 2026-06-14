@@ -13,6 +13,7 @@ import UploadZone from '../components/UploadZone';
 import ContextMenu, { MenuItem } from '../components/ContextMenu';
 import DetailsDialog from '../components/DetailsDialog';
 import MoveDialog from '../components/MoveDialog';
+import Breadcrumbs from '../components/Breadcrumbs';
 import toast from 'react-hot-toast';
 
 export default function Dashboard() {
@@ -373,9 +374,12 @@ export default function Dashboard() {
               <FiArrowLeft size={18} />
             </button>
           )}
-          <h2 className="text-2xl font-bold">
-            {folderId ? 'Folder' : 'My Files'}
-          </h2>
+          <div>
+            <h2 className="text-2xl font-bold">
+              {folderId ? '' : 'My Files'}
+            </h2>
+            <Breadcrumbs folderId={folderId} />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -471,7 +475,12 @@ export default function Dashboard() {
             ref={searchInputRef}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search files... (Ctrl+F)"
+            onKeyDown={e => {
+              if (e.key === 'Enter' && search.trim()) {
+                navigate(`/search?q=${encodeURIComponent(search.trim())}${typeFilter ? `&type=${typeFilter}` : ''}`);
+              }
+            }}
+            placeholder="Search files... (Ctrl+F, Enter to search)"
             className="w-full pl-10 pr-4 py-2.5 rounded-xl glass text-sm text-white placeholder-white/20 outline-none focus:border-cyan/30 transition-colors"
           />
         </div>
