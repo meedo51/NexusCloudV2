@@ -73,7 +73,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
   db.prepare(`
     INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(...Object.values(fileEntry));
+  `).run(id, fileEntry.name, fileEntry.originalName, fileEntry.mimeType, fileEntry.size, fileEntry.path, fileEntry.folderId, fileEntry.userId, 0, fileEntry.createdAt, fileEntry.updatedAt);
 
   res.status(201).json(fileEntry);
 });
@@ -93,7 +93,7 @@ router.post('/folder', (req: Request, res: Response) => {
   db.prepare(`
     INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, name, name, 'application/folder', 0, '', parentId || null, userId, true, createdAt, createdAt);
+  `).run(id, name, name, 'application/folder', 0, '', parentId || null, userId, 1, createdAt, createdAt);
 
   const folder = db.prepare('SELECT * FROM files WHERE id = ?').get(id);
   res.status(201).json(folder);
@@ -233,7 +233,7 @@ router.put('/:id/move', (req: Request, res: Response) => {
 
   if (folderId) {
     const targetFolder = db.prepare('SELECT * FROM files WHERE id = ? AND userId = ? AND isFolder = ?')
-      .get(folderId, userId, true);
+      .get(folderId, userId, 1);
     if (!targetFolder) {
       res.status(404).json({ error: 'Target folder not found' });
       return;
