@@ -45,7 +45,7 @@ db.exec(`
     isFolder INTEGER NOT NULL DEFAULT 0,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (folderId) REFERENCES folders(id) ON DELETE SET NULL,
+    FOREIGN KEY (folderId) REFERENCES files(id) ON DELETE SET NULL,
     FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
   );
 
