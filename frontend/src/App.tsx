@@ -11,6 +11,12 @@ import FileEditor from './pages/FileEditor';
 import Trash from './pages/Trash';
 import SearchResults from './pages/SearchResults';
 import FavoritesPage from './pages/FavoritesPage';
+import ActivityLogPage from './pages/ActivityLogPage';
+import UploadRequestPage from './pages/UploadRequestPage';
+import TwoFactorSetupPage from './pages/TwoFactorSetup';
+import WorkspaceDashboard from './pages/WorkspaceDashboard';
+import WorkspaceDetail from './pages/WorkspaceDetail';
+import WebDAVSettings from './pages/WebDAVSettings';
 import LoadingScreen from './components/LoadingScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -43,6 +49,12 @@ export default function App() {
         <Route path="search" element={<SearchResults />} />
         <Route path="editor" element={<FileEditor />} />
         <Route path="editor/:fileId" element={<FileEditor />} />
+        <Route path="activity" element={<ActivityLogPage />} />
+        <Route path="upload-requests" element={<UploadRequestPage />} />
+        <Route path="2fa" element={<TwoFactorSetupPage />} />
+        <Route path="workspaces" element={<WorkspaceDashboard />} />
+        <Route path="workspaces/:id" element={<WorkspaceDetail />} />
+        <Route path="webdav" element={<WebDAVSettings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

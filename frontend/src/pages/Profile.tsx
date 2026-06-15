@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   FiUser, FiMail, FiLock, FiSave, FiAtSign, FiEye, FiEyeOff,
-  FiHardDrive, FiAlertTriangle,
+  FiHardDrive, FiAlertTriangle, FiShield, FiServer,
 } from 'react-icons/fi';
 import { authApi, filesApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +20,7 @@ function formatSize(bytes: number): string {
 
 function Profile() {
   const { user, login } = useAuth();
+  const navigate = useNavigate();
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [username, setUsername] = useState(user?.username || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -226,6 +228,53 @@ function Profile() {
             {saving ? 'Updating...' : 'Change Password'}
           </button>
         </form>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="glass rounded-2xl p-6"
+      >
+        <h3 className="text-lg font-semibold mb-4">
+          <FiShield className="inline mr-2" size={16} />
+          Security
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+            <div>
+              <p className="text-white text-sm font-medium">Two-Factor Authentication</p>
+              <p className="text-xs text-white/40 mt-0.5">
+                {user?.two_factor_enabled ? 'Enabled' : 'Not configured'}
+              </p>
+            </div>
+            <button onClick={() => navigate('/2fa')}
+              className={`px-3 py-1.5 rounded-xl text-xs transition ${user?.two_factor_enabled ? 'bg-cyan/20 text-cyan hover:bg-cyan/30' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}>
+              {user?.two_factor_enabled ? 'Manage' : 'Setup'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+        className="glass rounded-2xl p-6"
+      >
+        <h3 className="text-lg font-semibold mb-4">
+          <FiServer className="inline mr-2" size={16} />
+          Connections
+        </h3>
+        <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+          <div>
+            <p className="text-white text-sm font-medium">WebDAV</p>
+            <p className="text-xs text-white/40 mt-0.5">Access files via WebDAV clients</p>
+          </div>
+          <button onClick={() => navigate('/webdav')} className="px-3 py-1.5 bg-white/10 text-white/60 rounded-xl text-xs hover:bg-white/20 transition">
+            Configure
+          </button>
+        </div>
       </motion.div>
     </div>
   );

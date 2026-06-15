@@ -6,6 +6,10 @@ export interface User {
   displayName: string;
   storageQuotaBytes: number;
   usedStorageBytes: number;
+  preferredView: string;
+  two_factor_secret: string | null;
+  two_factor_enabled: boolean;
+  backup_codes: string;
   createdAt: string;
 }
 
@@ -16,6 +20,8 @@ export interface UserPublic {
   displayName: string;
   storageQuotaBytes: number;
   usedStorageBytes: number;
+  preferredView: string;
+  two_factor_enabled: boolean;
   createdAt: string;
 }
 
@@ -32,6 +38,40 @@ export interface FileEntry {
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FileVersion {
+  id: string;
+  fileId: string;
+  versionNumber: number;
+  size: number;
+  storagePath: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface ActivityLogEntry {
+  id: string;
+  userId: string;
+  action: string;
+  itemType: string;
+  itemId: string | null;
+  itemName: string;
+  details: string;
+  ipAddress: string;
+  userAgent: string;
+  createdAt: string;
+}
+
+export interface UploadRequest {
+  id: string;
+  createdBy: string;
+  folderId: string;
+  token: string;
+  expiresAt: string;
+  maxSizeBytes: number;
+  allowedTypes: string;
+  createdAt: string;
 }
 
 export interface FavoriteEntry {
@@ -71,4 +111,68 @@ export interface Folder {
 export interface JwtPayload {
   userId: string;
   username: string;
+}
+
+// Tier 3 types
+export interface Workspace {
+  id: string;
+  name: string;
+  description: string;
+  ownerId: string;
+  storageQuotaBytes: number;
+  usedStorageBytes: number;
+  createdAt: string;
+  updatedAt: string;
+  memberCount?: number;
+  role?: string;
+}
+
+export interface WorkspaceMember {
+  workspaceId: string;
+  userId: string;
+  role: 'admin' | 'member' | 'viewer';
+  invitedBy: string | null;
+  joinedAt: string;
+  username?: string;
+  email?: string;
+}
+
+export interface WorkspaceInvite {
+  id: string;
+  workspaceId: string;
+  email: string;
+  token: string;
+  role: string;
+  invitedBy: string;
+  expiresAt: string;
+  accepted: boolean;
+  createdAt: string;
+}
+
+export interface TwoFactorSetup {
+  secret: string;
+  qrCode: string;
+  backupCodes: string[];
+}
+
+export interface WebDAVInfo {
+  url: string;
+  username: string;
+  instructions: {
+    windows: string;
+    mac: string;
+    linux: string;
+  };
+}
+
+export interface SearchResult {
+  id: string;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  folderId: string | null;
+  isFolder: boolean;
+  snippet?: string;
+  rank?: number;
 }
