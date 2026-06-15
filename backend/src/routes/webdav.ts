@@ -110,7 +110,7 @@ if (ENABLE_WEBDAV) {
       const now = new Date().toISOString();
 
       await prepare(
-        `INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`
+        `INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`
       ).run(id, safeName, fileName, mimeType, stats.size, filePath, folderId, userId, false, now, now);
 
       await recalculateUsedStorage(userId);
@@ -274,7 +274,7 @@ if (ENABLE_WEBDAV) {
       const newId = uuidv4();
       const now = new Date().toISOString();
       if (entry.isFolder) {
-        await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(newId, entry.name, entry.name, 'application/folder', 0, '', destFolderId, userId, true, now, now);
+        await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(newId, entry.name, entry.name, 'application/folder', 0, '', destFolderId, userId, true, now, now);
         const children = await prepare('SELECT * FROM files WHERE folderId = $? AND userId = $? AND deletedAt IS NULL').all(entry.id, userId) as FileEntry[];
         for (const child of children) await copyFileRecursive(child, newId, userId);
       } else {
@@ -284,7 +284,7 @@ if (ENABLE_WEBDAV) {
         if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
         const newPath = pathModule.join(userDir, safeName).replace(/\\/g, '/');
         if (fs.existsSync(entry.path)) fs.copyFileSync(entry.path, newPath);
-        await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(newId, safeName, entry.originalName, entry.mimeType, entry.size, newPath, destFolderId, userId, false, now, now);
+        await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(newId, safeName, entry.originalName, entry.mimeType, entry.size, newPath, destFolderId, userId, false, now, now);
       }
     }
 

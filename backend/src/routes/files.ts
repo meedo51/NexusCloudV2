@@ -163,7 +163,7 @@ router.post('/folder', async (req: Request, res: Response) => {
   if (!name) { res.status(400).json({ error: 'Folder name is required' }); return; }
   const id = uuidv4();
   const now = new Date().toISOString();
-  await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(id, name, name, 'application/folder', 0, '', parentId || null, userId, true, now, now);
+  await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(id, name, name, 'application/folder', 0, '', parentId || null, userId, true, now, now);
   const folder = await prepare('SELECT * FROM files WHERE id = $?').get(id);
   res.status(201).json(folder);
 });
@@ -183,7 +183,7 @@ router.post('/create', async (req: Request, res: Response) => {
   fs.writeFileSync(filePath, content || '', 'utf-8');
   const mimeType = name.endsWith('.md') ? 'text/markdown' : name.endsWith('.html') ? 'text/html' : name.endsWith('.css') ? 'text/css' : name.endsWith('.js') ? 'text/javascript' : name.endsWith('.json') ? 'application/json' : name.endsWith('.py') ? 'text/x-python' : name.endsWith('.ts') || name.endsWith('.tsx') ? 'text/typescript' : name.endsWith('.jsx') ? 'text/javascript' : name.endsWith('.yaml') || name.endsWith('.yml') ? 'text/yaml' : name.endsWith('.xml') ? 'text/xml' : name.endsWith('.sql') ? 'text/sql' : name.endsWith('.sh') ? 'text/x-shellscript' : 'text/plain';
   const now = new Date().toISOString();
-  await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(id, safeName, name, mimeType, byteLen, filePath, folderId || null, userId, false, now, now);
+  await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(id, safeName, name, mimeType, byteLen, filePath, folderId || null, userId, false, now, now);
   await recalculateUsedStorage(userId);
   const created = await prepare('SELECT * FROM files WHERE id = $?').get(id);
   await logActivity({ userId, action: 'create', itemType: 'file', itemId: id, itemName: name, details: { folderId: folderId || null }, ipAddress: String(req.ip || ''), userAgent: String(req.headers['user-agent'] || '') });

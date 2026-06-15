@@ -190,8 +190,9 @@ export const workspacesApi = {
   leave: (id: string) => api.post(`/workspaces/${id}/leave`).then(r => r.data),
 };
 
+const plainApi = axios.create({ baseURL: '' });
 export const webdavApi = {
-  info: () => api.get<WebDAVInfo>('/webdav/info').then(r => r.data),
+  info: () => plainApi.get<WebDAVInfo>('/webdav/info').then(r => r.data),
 };
 
 export const searchApi = {

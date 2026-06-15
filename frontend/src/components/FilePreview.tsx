@@ -19,9 +19,9 @@ export default function FilePreview({ file, onClose }: FilePreviewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  const isImage = file.mimeType.startsWith('image/');
+  const isImage = file.mimeType?.startsWith('image/');
   const isPdf = file.mimeType === 'application/pdf';
-  const isText = file.mimeType.startsWith('text/') || file.mimeType === 'application/json';
+  const isText = file.mimeType?.startsWith('text/') || file.mimeType === 'application/json';
 
   const previewMode: PreviewMode = isImage ? 'image' : isPdf ? 'pdf' : isText ? 'text' : 'unsupported';
 
@@ -164,7 +164,7 @@ export default function FilePreview({ file, onClose }: FilePreviewProps) {
           </div>
 
           <div className="px-4 py-2 border-t border-white/5 flex items-center gap-4 text-xs text-white/30 flex-shrink-0">
-            <span className="truncate">{file.mimeType}</span>
+            <span className="truncate">{file.mimeType || 'Unknown'}</span>
             <span className="hidden sm:inline">{new Intl.NumberFormat().format(file.size)} bytes</span>
             <span className="hidden sm:inline">{previewMode === 'image' ? `${zoom}%` : previewMode === 'pdf' ? 'PDF' : previewMode === 'text' ? 'Text' : ''}</span>
           </div>

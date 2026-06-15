@@ -14,10 +14,10 @@ function formatSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-function getIcon(mimeType: string) {
+function getIcon(mimeType: string | undefined) {
   if (mimeType === 'application/folder') return FiFolder;
-  if (mimeType.startsWith('image/')) return FiImage;
-  if (mimeType.startsWith('text/') || mimeType === 'application/pdf') return FiFileText;
+  if (mimeType?.startsWith('image/')) return FiImage;
+  if (mimeType?.startsWith('text/') || mimeType === 'application/pdf') return FiFileText;
   return FiFile;
 }
 

@@ -23,12 +23,52 @@ function convertParams(sql: string): string {
   return sql.replace(/\$?\?/g, () => `$${++idx}`);
 }
 
+const COLUMN_ALIASES: Record<string, string> = {
+  passwordhash: 'passwordHash',
+  displayname: 'displayName',
+  storagequotabytes: 'storageQuotaBytes',
+  usedstoragebytes: 'usedStorageBytes',
+  preferredview: 'preferredView',
+  mimetype: 'mimeType',
+  folderid: 'folderId',
+  userid: 'userId',
+  isfolder: 'isFolder',
+  deletedat: 'deletedAt',
+  createdat: 'createdAt',
+  updatedat: 'updatedAt',
+  fileid: 'fileId',
+  versionnumber: 'versionNumber',
+  storagepath: 'storagePath',
+  createdby: 'createdBy',
+  itemtype: 'itemType',
+  itemid: 'itemId',
+  itemname: 'itemName',
+  ipaddress: 'ipAddress',
+  useragent: 'userAgent',
+  maxsizebytes: 'maxSizeBytes',
+  allowedtypes: 'allowedTypes',
+  expiresat: 'expiresAt',
+  ownerid: 'ownerId',
+  membercount: 'memberCount',
+  workspaceid: 'workspaceId',
+  invitedby: 'invitedBy',
+  joinedat: 'joinedAt',
+  searchvector: 'searchVector',
+  extractedat: 'extractedAt',
+  contenttext: 'contentText',
+  backupcodes: 'backupCodes',
+  twofactorsecret: 'twoFactorSecret',
+  twofactorenabled: 'twoFactorEnabled',
+  foldername: 'folderName',
+  parentid: 'parentId',
+  storageschemaversion: 'storageSchemaVersion',
+};
+
 function toCamelCase(rows: any[]): any[] {
   return rows.map(row => {
     const result: any = {};
     for (const key of Object.keys(row)) {
-      const camelKey = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-      result[camelKey] = row[key];
+      result[COLUMN_ALIASES[key] || key] = row[key];
     }
     return result;
   });

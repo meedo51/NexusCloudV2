@@ -36,6 +36,14 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
   res.status(201).json(request);
 });
 
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const requests = await prepare(
+    'SELECT ur.*, f.name as folderName FROM upload_requests ur JOIN files f ON ur.folderId = f.id WHERE ur.createdBy = $? ORDER BY ur.createdAt DESC'
+  ).all(userId);
+  res.json(requests);
+});
+
 router.get('/my', authenticateToken, async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const requests = await prepare(

@@ -28,15 +28,15 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function getFileIcon(mimeType: string) {
+function getFileIcon(mimeType: string | undefined) {
   if (mimeType === 'application/folder') return FiFolder;
-  if (mimeType.startsWith('image/')) return FiImage;
-  if (mimeType.startsWith('text/') || mimeType === 'application/pdf') return FiFileText;
+  if (mimeType?.startsWith('image/')) return FiImage;
+  if (mimeType?.startsWith('text/') || mimeType === 'application/pdf') return FiFileText;
   return FiFile;
 }
 
-function isArchive(mimeType: string, name: string): boolean {
-  return mimeType.startsWith('application/zip') ||
+function isArchive(mimeType: string | undefined, name: string): boolean {
+  return mimeType?.startsWith('application/zip') ||
     name.endsWith('.zip') || name.endsWith('.rar') ||
     name.endsWith('.tar') || name.endsWith('.gz') ||
     name.endsWith('.7z');
@@ -66,10 +66,10 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
   const [isFav, setIsFav] = useState(favorited || false);
 
   const Icon = getFileIcon(file.mimeType);
-  const isImage = file.mimeType.startsWith('image/');
-  const isPreviewable = file.mimeType.startsWith('image/') ||
+  const isImage = file.mimeType?.startsWith('image/');
+  const isPreviewable = file.mimeType?.startsWith('image/') ||
     file.mimeType === 'application/pdf' ||
-    file.mimeType.startsWith('text/');
+    file.mimeType?.startsWith('text/');
   const isArchiveFile = isArchive(file.mimeType, file.name);
 
   const handleRename = async () => {
