@@ -66,7 +66,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
         {navItems.map((item) => (
-          <button key={item.path} onClick={() => { navigate(item.path); onClose(); }}
+          <button key={item.path} onClick={() => navigate(item.path)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
               item.active ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}>
@@ -79,7 +79,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           <span className="text-xs font-medium text-white/30 uppercase tracking-wider px-3">Tools</span>
         </div>
 
-        <button onClick={() => { navigate('/activity'); onClose(); }}
+        <button onClick={() => navigate('/activity')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
             location.pathname === '/activity' ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
           }`}>
@@ -87,7 +87,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           <span>Activity Log</span>
         </button>
 
-        <button onClick={() => { navigate('/upload-requests'); onClose(); }}
+        <button onClick={() => navigate('/upload-requests')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
             location.pathname === '/upload-requests' ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
           }`}>
@@ -95,7 +95,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           <span>Upload Requests</span>
         </button>
 
-        <button onClick={() => { navigate('/workspaces'); onClose(); }}
+        <button onClick={() => navigate('/workspaces')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
             location.pathname.startsWith('/workspaces') ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
           }`}>
@@ -103,7 +103,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           <span>Workspaces</span>
         </button>
 
-        <button onClick={() => { navigate('/webdav'); onClose(); }}
+        <button onClick={() => navigate('/webdav')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
             location.pathname === '/webdav' ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
           }`}>
@@ -111,7 +111,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           <span>WebDAV</span>
         </button>
 
-        <button onClick={() => { navigate('/2fa'); onClose(); }}
+        <button onClick={() => navigate('/2fa')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
             location.pathname === '/2fa' ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
           }`}>

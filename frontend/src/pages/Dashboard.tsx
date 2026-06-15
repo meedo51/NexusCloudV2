@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [showBatchMove, setShowBatchMove] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selRect, setSelRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [favIds, setFavIds] = useState<Set<string>>(new Set());
 
   const copiedIds = useRef<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
@@ -54,8 +55,12 @@ export default function Dashboard() {
       if (folderId) params.folderId = folderId;
       if (search) params.search = search;
       if (typeFilter) params.type = typeFilter;
-      const data = await filesApi.list(params);
+      const [data, favEntries] = await Promise.all([
+        filesApi.list(params),
+        filesApi.favorites(),
+      ]);
       setFiles(data);
+      setFavIds(new Set(favEntries.map(f => f.itemId)));
     } catch {
       toast.error('Failed to load files');
     }
@@ -621,6 +626,7 @@ export default function Dashboard() {
                   selected={selectedIds.has(file.id)}
                   onSelect={handleSelect}
                   selectionMode={selectionMode}
+                  favorited={favIds.has(file.id)}
                 />
               </div>
             ))}
@@ -639,6 +645,7 @@ export default function Dashboard() {
                   selected={selectedIds.has(file.id)}
                   onSelect={handleSelect}
                   selectionMode={selectionMode}
+                  favorited={favIds.has(file.id)}
                 />
               </div>
             ))}

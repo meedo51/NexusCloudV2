@@ -284,6 +284,16 @@ router.post('/:id/restore', async (req: Request, res: Response) => {
   res.json({ message: 'File restored' });
 });
 
+router.post('/trash/restore-all', async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const files = await prepare('SELECT * FROM files WHERE userId = $? AND deletedAt IS NOT NULL').all(userId) as FileEntry[];
+  for (const file of files) {
+    await restoreEntry(file.id, userId);
+  }
+  await recalculateUsedStorage(userId);
+  res.json({ message: `${files.length} items restored` });
+});
+
 router.delete('/:id/permanent', async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const userId = req.user!.userId;

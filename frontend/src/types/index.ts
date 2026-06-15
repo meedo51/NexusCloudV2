@@ -63,6 +63,8 @@ export interface ShareLink {
 export interface AuthResponse {
   token: string;
   user: User;
+  require2FA?: boolean;
+  tempToken?: string;
 }
 
 export interface ShareAccessResponse {

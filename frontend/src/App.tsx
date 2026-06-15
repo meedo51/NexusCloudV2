@@ -13,6 +13,7 @@ import SearchResults from './pages/SearchResults';
 import FavoritesPage from './pages/FavoritesPage';
 import ActivityLogPage from './pages/ActivityLogPage';
 import UploadRequestPage from './pages/UploadRequestPage';
+import PublicUploadRequest from './pages/PublicUploadRequest';
 import TwoFactorSetupPage from './pages/TwoFactorSetup';
 import WorkspaceDashboard from './pages/WorkspaceDashboard';
 import WorkspaceDetail from './pages/WorkspaceDetail';
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/s/:token" element={<SharedFile />} />
+      <Route path="/request/:token" element={<PublicUploadRequest />} />
       <Route
         path="/"
         element={

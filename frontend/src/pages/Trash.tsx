@@ -57,6 +57,16 @@ export default function Trash() {
     } catch { toast.error('Failed to delete'); }
   };
 
+  const handleRestoreAll = async () => {
+    setIsProcessing(true);
+    try {
+      await filesApi.batchRestore();
+      toast.success('All items restored');
+      loadTrash();
+    } catch { toast.error('Failed to restore all'); }
+    setIsProcessing(false);
+  };
+
   const handlePurgeAll = async () => {
     if (!window.confirm('Empty the entire trash? This cannot be undone.')) return;
     setIsProcessing(true);
@@ -97,6 +107,9 @@ export default function Trash() {
         <div className="flex items-center gap-2">
           {files.length > 0 && (
             <>
+              <button onClick={handleRestoreAll} disabled={isProcessing} className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass hover:bg-white/5 text-cyan text-xs">
+                <FiRotateCcw size={14} /> Restore All
+              </button>
               <button onClick={handlePurgeOld} disabled={isProcessing} className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass hover:bg-white/5 text-white/60 hover:text-white text-xs">
                 <FiClock size={14} /> Purge 30d+
               </button>

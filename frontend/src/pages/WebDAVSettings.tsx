@@ -51,7 +51,7 @@ export default function WebDAVSettings() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-cyan mb-1">Windows</h3>
-                <p className="text-sm text-white/60">{info.instructions.windows}</p>
+                <p className="text-sm text-white/60">{info.instructions?.windows || ''}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-cyan mb-1">macOS</h3>

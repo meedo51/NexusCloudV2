@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
   FiFile, FiFolder, FiImage, FiFileText, FiDownload,
@@ -131,7 +132,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
   const handleExtract = async () => {
     setIsExtracting(true);
     try {
-      const res = await filesApi.extract(file.id);
+      const res = await filesApi.extract(file.id, file.folderId || undefined);
       toast.success(`Extracted ${res.files?.length || 0} entries`);
       onRefresh();
     } catch (err: any) {
@@ -334,7 +335,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
           )}
         </motion.div>
         {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} onClose={() => setShowShare(false)} />}
-        {showPreview && <FilePreview file={file} onClose={() => setShowPreview(false)} />}
+        {showPreview && createPortal(<FilePreview file={file} onClose={() => setShowPreview(false)} />, document.body)}
         {showMove && <MoveDialog fileId={file.id} fileName={file.originalName || file.name} currentFolderId={file.folderId} onClose={() => setShowMove(false)} onMoved={onRefresh} />}
         {showDetails && <DetailsDialog fileId={file.id} onClose={() => setShowDetails(false)} />}
         {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
@@ -358,7 +359,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
         {cardContent}
       </motion.div>
       {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} onClose={() => setShowShare(false)} />}
-      {showPreview && <FilePreview file={file} onClose={() => setShowPreview(false)} />}
+      {showPreview && createPortal(<FilePreview file={file} onClose={() => setShowPreview(false)} />, document.body)}
       {showMove && <MoveDialog fileId={file.id} fileName={file.originalName || file.name} currentFolderId={file.folderId} onClose={() => setShowMove(false)} onMoved={onRefresh} />}
       {showDetails && <DetailsDialog fileId={file.id} onClose={() => setShowDetails(false)} />}
       {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}

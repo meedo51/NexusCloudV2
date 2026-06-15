@@ -14,7 +14,7 @@ function generateToken(): string {
 }
 
 router.post('/', authenticateToken, async (req: Request, res: Response) => {
-  const { folderId, maxSizeBytes, allowedTypes, expiresInDays = 7 } = req.body;
+  const { folderId, maxSizeBytes, allowedTypes, expiresInHours = 24 } = req.body;
   const userId = req.user!.userId;
 
   if (!folderId) { res.status(400).json({ error: 'folderId is required' }); return; }
@@ -25,7 +25,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
   const id = uuidv4();
   const token = generateToken();
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + (parseInt(expiresInDays as string, 10) || 7));
+  expiresAt.setHours(expiresAt.getHours() + (parseInt(expiresInHours as string, 10) || 24));
 
   await prepare(`
     INSERT INTO upload_requests (id, createdBy, folderId, token, expiresAt, maxSizeBytes, allowedTypes)
