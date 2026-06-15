@@ -58,13 +58,18 @@ export interface ShareLink {
   originalName?: string;
   mimeType?: string;
   size?: number;
+  isFolder: boolean;
+  permission: 'view' | 'download' | 'upload';
+  allowUpload: boolean;
 }
 
-export interface AuthResponse {
-  token: string;
-  user: User;
-  require2FA?: boolean;
-  tempToken?: string;
+export interface SharedFolderFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  isFolder: boolean;
+  folderId: string | null;
 }
 
 export interface ShareAccessResponse {
@@ -72,6 +77,18 @@ export interface ShareAccessResponse {
   file?: { id: string; name: string; mimeType: string; size: number; };
   downloadUrl?: string;
   expiresAt?: string;
+  isFolder?: boolean;
+  folder?: { id: string; name: string; };
+  permission?: 'view' | 'download' | 'upload';
+  allowUpload?: boolean;
+  files?: SharedFolderFile[];
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+  require2FA?: boolean;
+  tempToken?: string;
 }
 
 export interface FolderTreeItem {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiLink, FiTrash2, FiCopy, FiClock, FiDownload } from 'react-icons/fi';
+import { FiLink, FiTrash2, FiCopy, FiClock, FiDownload, FiFolder, FiEye, FiUpload } from 'react-icons/fi';
 import { shareApi } from '../services/api';
 import { ShareLink } from '../types';
 import toast from 'react-hot-toast';
@@ -110,7 +110,10 @@ export default function ShareManage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-sm font-medium truncate">{share.originalName || share.fileName || 'Unknown file'}</h4>
+                    <h4 className="text-sm font-medium truncate flex items-center gap-1.5">
+                      {share.isFolder && <FiFolder size={14} className="text-cyan/60 flex-shrink-0" />}
+                      {share.originalName || share.fileName || 'Unknown file'}
+                    </h4>
                     {isExpired(share.expiresAt) && (
                       <span className="px-2 py-0.5 rounded-full bg-coral/20 text-coral text-[10px] font-medium">Expired</span>
                     )}
@@ -126,6 +129,11 @@ export default function ShareManage() {
                       {share.downloads} downloads
                     </span>
                     {share.passwordHash && <span className="text-coral/60">🔒 Protected</span>}
+                    {share.permission && (
+                      <span className="px-1.5 py-0.5 rounded bg-cyan/10 text-cyan text-[10px] font-medium">
+                        {share.permission === 'view' ? 'View' : share.permission === 'upload' ? 'Upload' : 'Download'}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">

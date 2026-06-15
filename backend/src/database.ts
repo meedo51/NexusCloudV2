@@ -136,9 +136,15 @@ export async function initializeDatabase(): Promise<void> {
         passwordHash TEXT,
         expiresAt TIMESTAMPTZ NOT NULL,
         createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        downloads INTEGER NOT NULL DEFAULT 0
+        downloads INTEGER NOT NULL DEFAULT 0,
+        isFolder BOOLEAN NOT NULL DEFAULT FALSE,
+        permission VARCHAR(20) NOT NULL DEFAULT 'download',
+        allowUpload BOOLEAN NOT NULL DEFAULT FALSE
       )
     `);
+    await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS isFolder BOOLEAN NOT NULL DEFAULT FALSE`);
+    await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS permission VARCHAR(20) NOT NULL DEFAULT 'download'`);
+    await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS allowUpload BOOLEAN NOT NULL DEFAULT FALSE`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS favorites (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

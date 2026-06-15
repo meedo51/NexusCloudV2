@@ -210,14 +210,24 @@ const publicApi = axios.create({
 publicApi.interceptors.response.use((res) => res, (err) => Promise.reject(err));
 
 export const shareApi = {
-  create: (fileId: string, password?: string, expiresInDays?: number) =>
-    api.post<ShareLink>('/share', { fileId, password, expiresInDays }).then(r => r.data),
+  create: (fileId: string, password?: string, expiresInDays?: number, permission?: string, allowUpload?: boolean) =>
+    api.post<ShareLink>('/share', { fileId, password, expiresInDays, permission, allowUpload }).then(r => r.data),
   list: () => api.get<ShareLink[]>('/share/my').then(r => r.data),
   delete: (id: string) => api.delete(`/share/${id}`).then(r => r.data),
   access: (token: string, password?: string) =>
     publicApi.get<ShareAccessResponse>(`/share/access/${token}`, { params: { password } }).then(r => r.data),
+  accessFolder: (token: string, password?: string, folderId?: string) =>
+    publicApi.get<{ permission: string; allowUpload: boolean; files: any[] }>(`/share/access/${token}/files`, { params: { password, folderId } }).then(r => r.data),
   download: (token: string, password?: string) =>
     publicApi.get(`/share/download/${token}`, { params: { password }, responseType: 'blob' }).then(r => r.data),
+  upload: (token: string, file: File, password?: string) => {
+    const form = new FormData();
+    form.append('file', file);
+    return publicApi.post(`/share/upload/${token}`, form, {
+      params: { password },
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data);
+  },
 };
 
 export default api;

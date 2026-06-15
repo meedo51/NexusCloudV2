@@ -171,6 +171,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
         { id: 'rename', label: 'Rename', icon: <FiEdit2 size={14} />, shortcut: 'F2', onClick: () => { setNewName(file.originalName || file.name); setIsRenaming(true); } },
         { id: 'download-zip', label: 'Download as ZIP', icon: <FiArchive size={14} />, onClick: handleDownloadZip },
         { id: 'move', label: 'Move to...', icon: <FiMove size={14} />, onClick: () => setShowMove(true) },
+        { id: 'share', label: 'Share', icon: <FiShare2 size={14} />, onClick: () => setShowShare(true) },
         { id: 'divider-1', label: '', icon: <></>, divider: true, onClick: () => {} },
         { id: 'details', label: 'Details', icon: <FiInfo size={14} />, onClick: () => setShowDetails(true) },
         { id: 'divider-2', label: '', icon: <></>, divider: true, onClick: () => {} },
@@ -334,7 +335,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
             </div>
           )}
         </motion.div>
-        {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} onClose={() => setShowShare(false)} />}
+        {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} isFolder={file.isFolder} onClose={() => setShowShare(false)} />}
         {showPreview && createPortal(<FilePreview file={file} onClose={() => setShowPreview(false)} />, document.body)}
         {showMove && <MoveDialog fileId={file.id} fileName={file.originalName || file.name} currentFolderId={file.folderId} onClose={() => setShowMove(false)} onMoved={onRefresh} />}
         {showDetails && <DetailsDialog fileId={file.id} onClose={() => setShowDetails(false)} />}
@@ -358,7 +359,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
       >
         {cardContent}
       </motion.div>
-      {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} onClose={() => setShowShare(false)} />}
+      {showShare && <ShareDialog fileId={file.id} fileName={file.originalName || file.name} isFolder={file.isFolder} onClose={() => setShowShare(false)} />}
       {showPreview && createPortal(<FilePreview file={file} onClose={() => setShowPreview(false)} />, document.body)}
       {showMove && <MoveDialog fileId={file.id} fileName={file.originalName || file.name} currentFolderId={file.folderId} onClose={() => setShowMove(false)} onMoved={onRefresh} />}
       {showDetails && <DetailsDialog fileId={file.id} onClose={() => setShowDetails(false)} />}

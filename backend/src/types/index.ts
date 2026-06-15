@@ -98,6 +98,9 @@ export interface ShareLink {
   expiresAt: string;
   createdAt: string;
   downloads: number;
+  isFolder: boolean;
+  permission: 'view' | 'download' | 'upload';
+  allowUpload: boolean;
 }
 
 export interface Folder {
