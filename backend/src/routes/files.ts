@@ -435,7 +435,7 @@ router.post('/batch/save-zip', async (req: Request, res: Response) => {
   output.on('close', async () => {
     const now = new Date().toISOString();
     const zipFile = { id: zipId, name: `${zipId}.zip`, originalName: `${name}.zip`, mimeType: 'application/zip', size: archive.pointer(), path: zipPath, folderId: folderId || null, userId, isFolder: false, createdAt: now, updatedAt: now };
-    await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(zipFile.id, zipFile.name, zipFile.originalName, zipFile.mimeType, zipFile.size, zipFile.path, zipFile.folderId, zipFile.userId, false, zipFile.createdAt, zipFile.updatedAt);
+    await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(zipFile.id, zipFile.name, zipFile.originalName, zipFile.mimeType, zipFile.size, zipFile.path, zipFile.folderId, zipFile.userId, false, zipFile.createdAt, zipFile.updatedAt);
     await recalculateUsedStorage(userId);
     res.status(201).json(zipFile);
   });
@@ -478,7 +478,7 @@ async function deepCopyEntry(entryId: string, destFolderId: string | null, userI
   const newId = uuidv4();
   const now = new Date().toISOString();
   if (entry.isFolder) {
-    await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(newId, entry.name, entry.name, 'application/folder', 0, '', destFolderId, userId, true, now, now);
+    await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(newId, entry.name, entry.name, 'application/folder', 0, '', destFolderId, userId, true, now, now);
     const children = await prepare('SELECT * FROM files WHERE folderId = $? AND userId = $? AND deletedAt IS NULL').all(entryId, userId) as FileEntry[];
     for (const child of children) await deepCopyEntry(child.id, newId, userId);
   } else {
@@ -488,7 +488,7 @@ async function deepCopyEntry(entryId: string, destFolderId: string | null, userI
     if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
     const newPath = path.join(userDir, safeName).replace(/\\/g, '/');
     if (fs.existsSync(entry.path)) fs.copyFileSync(entry.path, newPath);
-    await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(newId, safeName, entry.originalName, entry.mimeType, entry.size, newPath, destFolderId, userId, false, now, now);
+    await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(newId, safeName, entry.originalName, entry.mimeType, entry.size, newPath, destFolderId, userId, false, now, now);
   }
 }
 
@@ -522,7 +522,7 @@ router.post('/:id/extract', async (req: Request, res: Response) => {
         const folderId = uuidv4();
         const now = new Date().toISOString();
         const folderName = entry.entryName.replace(/\/$/, '').split('/').pop() || 'folder';
-        await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(folderId, folderName, folderName, 'application/folder', 0, '', destFolderId || null, userId, true, now, now);
+        await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(folderId, folderName, folderName, 'application/folder', 0, '', destFolderId || null, userId, true, now, now);
         created.push({ id: folderId, name: folderName, isFolder: true });
       } else {
         const fileId = uuidv4();
@@ -535,7 +535,7 @@ router.post('/:id/extract', async (req: Request, res: Response) => {
         const filePath = path.join(userDir, safeName).replace(/\\/g, '/');
         fs.writeFileSync(filePath, entry.getData());
         const mimeType = ext === '.md' ? 'text/markdown' : ext === '.html' ? 'text/html' : ext === '.css' ? 'text/css' : ext === '.js' ? 'text/javascript' : ext === '.json' ? 'application/json' : ext === '.py' ? 'text/x-python' : ext === '.ts' || ext === '.tsx' ? 'text/typescript' : ext === '.txt' ? 'text/plain' : 'application/octet-stream';
-        await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(fileId, safeName, originalName, mimeType, entry.header.size, filePath, destFolderId || null, userId, false, now, now);
+        await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(fileId, safeName, originalName, mimeType, entry.header.size, filePath, destFolderId || null, userId, false, now, now);
         created.push({ id: fileId, name: originalName, isFolder: false });
       }
     }
