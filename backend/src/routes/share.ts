@@ -260,6 +260,56 @@ router.get('/download/:token', async (req: Request, res: Response) => {
   res.download(file.path, file.originalName);
 });
 
+router.get('/download/:token/file/:fileId', async (req: Request, res: Response) => {
+  const token = req.params.token as string;
+  const fileId = req.params.fileId as string;
+  const query = req.query as { password?: string };
+  const password = query.password;
+
+  const { share, error } = await verifyShareAccess(token, password);
+  if (error) {
+    res.status(error.status).json({ error: error.message });
+    return;
+  }
+
+  if (share.permission === 'view') {
+    res.status(403).json({ error: 'Download not allowed' });
+    return;
+  }
+
+  const file = await prepare('SELECT * FROM files WHERE id = $?').get(fileId) as FileEntry | undefined;
+  if (!file || file.isFolder || !fs.existsSync(file.path)) {
+    res.status(404).json({ error: 'File not found' });
+    return;
+  }
+
+  const sharedFolder = await prepare('SELECT * FROM files WHERE id = $?').get(share.fileId) as FileEntry | undefined;
+  if (!sharedFolder || !sharedFolder.isFolder) {
+    res.status(400).json({ error: 'Share is not a folder' });
+    return;
+  }
+
+  let current = file;
+  let inFolder = false;
+  while (current.folderId) {
+    if (current.folderId === share.fileId) {
+      inFolder = true;
+      break;
+    }
+    const parent = await prepare('SELECT * FROM files WHERE id = $?').get(current.folderId) as FileEntry | undefined;
+    if (!parent) break;
+    current = parent;
+  }
+
+  if (!inFolder) {
+    res.status(403).json({ error: 'File not in shared folder' });
+    return;
+  }
+
+  await prepare('UPDATE share_links SET downloads = downloads + 1 WHERE id = $?').run(share.id);
+  res.download(file.path, file.originalName);
+});
+
 router.post('/upload/:token', async (req: Request, res: Response) => {
   const token = req.params.token as string;
   const query = req.query as { password?: string };

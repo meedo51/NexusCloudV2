@@ -134,7 +134,7 @@ export default function SharedFile() {
     if (!token) return;
     try {
       const pass = hasPassword ? passwordAttempt : undefined;
-      const blob = await shareApi.download(token, pass);
+      const blob = await shareApi.downloadFile(token, fileId, pass);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

@@ -50,6 +50,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   maxsizebytes: 'maxSizeBytes',
   allowedtypes: 'allowedTypes',
   expiresat: 'expiresAt',
+  allowupload: 'allowUpload',
   ownerid: 'ownerId',
   membercount: 'memberCount',
   workspaceid: 'workspaceId',

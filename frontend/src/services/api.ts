@@ -220,6 +220,8 @@ export const shareApi = {
     publicApi.get<{ permission: string; allowUpload: boolean; files: any[] }>(`/share/access/${token}/files`, { params: { password, folderId } }).then(r => r.data),
   download: (token: string, password?: string) =>
     publicApi.get(`/share/download/${token}`, { params: { password }, responseType: 'blob' }).then(r => r.data),
+  downloadFile: (token: string, fileId: string, password?: string) =>
+    publicApi.get(`/share/download/${token}/file/${fileId}`, { params: { password }, responseType: 'blob' }).then(r => r.data),
   upload: (token: string, file: File, password?: string) => {
     const form = new FormData();
     form.append('file', file);
