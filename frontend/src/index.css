@@ -132,20 +132,31 @@
   66% { transform: translate(-20px, 20px) scale(0.95); }
 }
 
-.gradient-mesh {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(255, 107, 107, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, rgba(0, 240, 255, 0.02) 0%, transparent 50%);
-  animation: gradientMesh 15s ease infinite;
-  background-size: 200% 200%;
-}
+  .gradient-mesh {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(255, 107, 107, 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(0, 240, 255, 0.02) 0%, transparent 50%);
+    animation: gradientMesh 15s ease infinite;
+    background-size: 200% 200%;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 240, 255, 0.2);
+    border-radius: 2px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
 @keyframes gradientMesh {
   0%, 100% { background-position: 0% 50%; }

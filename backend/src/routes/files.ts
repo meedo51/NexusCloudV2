@@ -200,6 +200,21 @@ router.get('/:id/content', async (req: Request, res: Response) => {
   res.json({ content, mimeType: file.mimeType, name: file.originalName });
 });
 
+router.get('/:id/info', async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const userId = req.user!.userId;
+  const file = await prepare('SELECT * FROM files WHERE id = $? AND userId = $? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
+  if (!file || file.isFolder) { res.status(404).json({ error: 'File not found' }); return; }
+  if (!fs.existsSync(file.path)) { res.status(404).json({ error: 'File not found on disk' }); return; }
+  const content = fs.readFileSync(file.path, 'utf-8');
+  const lineCount = content.split('\n').length;
+  res.json({
+    id: file.id, name: file.name, originalName: file.originalName,
+    mimeType: file.mimeType, size: file.size, lineCount,
+    encoding: 'UTF-8', createdAt: file.createdAt, updatedAt: file.updatedAt,
+  });
+});
+
 router.put('/:id/content', async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const { content } = req.body;
@@ -208,8 +223,13 @@ router.put('/:id/content', async (req: Request, res: Response) => {
   const file = await prepare('SELECT * FROM files WHERE id = $? AND userId = $? AND deletedAt IS NULL').get(id, userId) as FileEntry | undefined;
   if (!file || file.isFolder) { res.status(404).json({ error: 'File not found' }); return; }
   const newSize = Buffer.byteLength(content, 'utf-8');
+  if (newSize > 5 * 1024 * 1024) { res.status(413).json({ error: 'File exceeds 5MB editing limit' }); return; }
   const sizeDiff = newSize - file.size;
   if (sizeDiff > 0) { const q = await checkQuota(userId, sizeDiff); if (!q.allowed) { res.status(403).json({ error: `Storage quota exceeded. ${q.remaining} bytes remaining` }); return; } }
+  const maxVer = await prepare('SELECT MAX(versionNumber) as v FROM file_versions WHERE fileId = $?').get(id) as any;
+  const nextVer = (maxVer?.v || 0) + 1;
+  const versionId = uuidv4();
+  await prepare('INSERT INTO file_versions (id, fileId, versionNumber, size, storagePath, createdBy, createdAt) VALUES ($?, $?, $?, $?, $?, $?, $?)').run(versionId, id, nextVer, file.size, file.path, userId, new Date().toISOString());
   fs.writeFileSync(file.path, content, 'utf-8');
   const updatedAt = new Date().toISOString();
   await prepare('UPDATE files SET size = $?, updatedAt = $? WHERE id = $?').run(newSize, updatedAt, id);

@@ -223,3 +223,15 @@ export interface SearchResponse {
   results: SearchResult[];
   total: number;
 }
+
+export interface FileInfo {
+  id: string;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  lineCount: number;
+  encoding: string;
+  createdAt: string;
+  updatedAt: string;
+}

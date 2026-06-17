@@ -3,7 +3,7 @@ import {
   AuthResponse, FileItem, ShareLink, ShareAccessResponse, FileContent,
   QuotaInfo, FavoriteEntry, BreadcrumbItem, FileVersion, ActivityLogEntry,
   UploadRequest, Workspace, WorkspaceMember, WorkspaceInvite, WorkspaceItem,
-  TwoFactorSetup, WebDAVInfo, SearchResponse,
+  TwoFactorSetup, WebDAVInfo, SearchResponse, FileInfo,
 } from '../types';
 
 const api = axios.create({
@@ -83,6 +83,8 @@ export const filesApi = {
     api.get('/files/all-folders').then(r => r.data),
   getContent: (id: string) =>
     api.get<FileContent>(`/files/${id}/content`).then(r => r.data),
+  getFileInfo: (id: string) =>
+    api.get<FileInfo>(`/files/${id}/info`).then(r => r.data),
   saveContent: (id: string, content: string) =>
     api.put(`/files/${id}/content`, { content }).then(r => r.data),
   extract: (id: string, destFolderId?: string) =>
