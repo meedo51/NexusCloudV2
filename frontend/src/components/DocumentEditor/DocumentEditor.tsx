@@ -31,6 +31,7 @@ import ExportDialog from './ExportDialog';
 import DocumentSidebar from './DocumentSidebar';
 import FindReplaceDialog from './FindReplaceDialog';
 import { FindReplaceExtension } from '../../extensions/FindReplaceExtension';
+import { FontSizeExtension } from '../../extensions/FontSizeExtension';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import type { NexusDocument } from '../../types';
 
@@ -45,6 +46,7 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
   const [showSidebar, setShowSidebar] = useState(true);
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [whitePage, setWhitePage] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -64,6 +66,7 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
       Highlight.configure({ multicolor: true }),
       FontFamily,
       TextStyle,
+      FontSizeExtension,
       Placeholder.configure({ placeholder: 'Start writing...' }),
       CharacterCount,
       TaskList,
@@ -75,17 +78,47 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
     content: document.content || '',
     editorProps: {
       attributes: {
-        class: 'prose prose-invert max-w-none focus:outline-none min-h-[500px] px-8 py-6',
+        class: 'prose prose-invert max-w-none focus:outline-none min-h-[600px] px-10 py-8',
       },
     },
   });
 
-  // Keyboard shortcuts: Ctrl+F / Cmd+F for find/replace
+  // Toggle white-page class on editor DOM element
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    if (whitePage) {
+      dom.classList.add('white-page');
+    } else {
+      dom.classList.remove('white-page');
+    }
+  }, [editor, whitePage]);
+
+  // Keyboard shortcuts
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
+  const editorRef = useRef(editor);
+  editorRef.current = editor;
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
         setShowFindReplace(prev => !prev);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        const ed = editorRef.current;
+        if (ed) {
+          const content = ed.getHTML();
+          const meta = {
+            wordCount: ed.storage.characterCount?.words?.() || 0,
+            characterCount: ed.storage.characterCount?.characters?.() || 0,
+          };
+          setIsSaving(true);
+          onSaveRef.current(content, meta).finally(() => setIsSaving(false));
+        }
+        return;
       }
       if (e.key === 'Escape' && showFindReplace) {
         setShowFindReplace(false);
@@ -159,8 +192,8 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
   if (!editor) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0B0F19] overflow-hidden">
-      <div className="gradient-mesh" />
+    <div className={`document-editor fixed inset-0 z-50 overflow-hidden ${whitePage ? 'bg-white' : 'bg-[#0B0F19]'}`}>
+      {!whitePage && <div className="gradient-mesh" />}
 
       {/* Exit button */}
       <motion.button
@@ -168,7 +201,9 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ scale: 1.05 }}
         onClick={onBack}
-        className="fixed top-4 left-4 z-50 glass rounded-2xl px-4 py-2 text-sm text-white/60 hover:text-cyan flex items-center gap-2 border border-white/5 hover:border-cyan/30 transition-all"
+        className={`fixed top-4 left-4 z-50 glass rounded-2xl px-4 py-2 text-sm flex items-center gap-2 border transition-all ${
+          whitePage ? 'text-gray-600 hover:text-gray-900 border-gray-200 hover:border-gray-400 bg-white/80' : 'text-white/60 hover:text-cyan border-white/5 hover:border-cyan/30'
+        }`}
       >
         <FiChevronLeft size={16} />
         <span className="hidden sm:inline">NexusCloud</span>
@@ -177,7 +212,7 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
       {/* Save indicator */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
         {isSaving && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-xs text-white/40">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`flex items-center gap-2 text-xs ${whitePage ? 'text-gray-400' : 'text-white/40'}`}>
             <FiClock size={12} />
             Saving...
           </motion.div>
@@ -186,7 +221,11 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
           whileHover={{ scale: 1.05 }}
           onClick={() => setShowSidebar(!showSidebar)}
           className={`glass rounded-2xl px-3 py-2 text-sm flex items-center gap-2 border transition-all ${
-            showSidebar ? 'text-cyan border-cyan/30' : 'text-white/60 hover:text-cyan border-white/5 hover:border-cyan/30'
+            showSidebar
+              ? 'text-cyan border-cyan/30'
+              : whitePage
+                ? 'text-gray-500 hover:text-gray-700 border-gray-200 hover:border-gray-400 bg-white/80'
+                : 'text-white/60 hover:text-cyan border-white/5 hover:border-cyan/30'
           }`}
           title="Toggle sidebar"
         >
@@ -195,7 +234,9 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
         <motion.button
           whileHover={{ scale: 1.05 }}
           onClick={() => setShowExport(true)}
-          className="glass rounded-2xl px-4 py-2 text-sm text-white/60 hover:text-cyan flex items-center gap-2 border border-white/5 hover:border-cyan/30 transition-all"
+          className={`glass rounded-2xl px-4 py-2 text-sm flex items-center gap-2 border transition-all ${
+            whitePage ? 'text-gray-500 hover:text-gray-700 border-gray-200 hover:border-gray-400 bg-white/80' : 'text-white/60 hover:text-cyan border-white/5 hover:border-cyan/30'
+          }`}
         >
           <FiDownload size={14} />
           <span className="hidden sm:inline">Export</span>
@@ -204,18 +245,26 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
 
       {/* Toolbar */}
       <div className="pt-16 px-4">
-        <DocumentToolbar editor={editor} />
+        <DocumentToolbar
+          editor={editor}
+          onToggleWhitePage={() => setWhitePage(!whitePage)}
+          isWhitePage={whitePage}
+        />
       </div>
 
       {/* Editor area */}
-      <div className="flex h-[calc(100vh-200px)] overflow-hidden">
+      <div className={`flex h-[calc(100vh-200px)] overflow-hidden ${whitePage ? 'bg-gray-50' : ''}`}>
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="max-w-4xl mx-auto my-6">
-            <div className="bg-[#0F1521] rounded-2xl shadow-2xl border border-white/5 overflow-hidden">
+            <div className={`rounded-2xl shadow-2xl border overflow-hidden ${
+              whitePage
+                ? 'bg-white border-gray-200 shadow-gray-200/50'
+                : 'bg-[#0F1521] border-white/5'
+            }`}>
               <BubbleMenu editor={editor} tippyOptions={{ duration: 150 }}>
                 <FloatingToolbar editor={editor} />
               </BubbleMenu>
-              <div className="p-4">
+              <div className={whitePage ? 'p-4' : 'p-4'}>
                 <EditorContent editor={editor} />
               </div>
             </div>
@@ -226,11 +275,12 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
           document={document}
           isOpen={showSidebar}
           onClose={() => setShowSidebar(false)}
+          whitePage={whitePage}
         />
       </div>
 
       {/* Status bar */}
-      <StatusBar editor={editor} version={document.version} />
+      <StatusBar editor={editor} version={document.version} whitePage={whitePage} />
 
       {/* Find/Replace dialog */}
       <FindReplaceDialog
@@ -244,4 +294,3 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
     </div>
   );
 }
-
