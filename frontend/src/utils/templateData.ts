@@ -1,0 +1,15 @@
+import type { DocumentTemplate } from '../types';
+
+export const templateData: DocumentTemplate[] = [
+  { id: 'blank', name: 'Blank Document', category: 'general', content: '' },
+  { id: 'resume', name: 'Resume', category: 'professional', content: '<h1>Your Name</h1><p>Email | Phone | LinkedIn</p><hr><h2>Experience</h2><h3>Job Title - Company</h3><p>Description</p><h2>Education</h2><h3>Degree - School</h3><p>Year - Year</p><h2>Skills</h2><ul><li>Skill 1</li><li>Skill 2</li></ul>' },
+  { id: 'letter', name: 'Cover Letter', category: 'professional', content: '<p>Date</p><p>Hiring Manager<br>Company Name</p><p>Dear Hiring Manager,</p><p>I am writing to express my interest in...</p><p>Sincerely,<br>Your Name</p>' },
+  { id: 'report', name: 'Report', category: 'business', content: '<h1>Report Title</h1><h2>Executive Summary</h2><p>Summary here.</p><h2>Findings</h2><p>Content.</p><h2>Conclusion</h2><p>Conclusion here.</p>' },
+  { id: 'invoice', name: 'Invoice', category: 'business', content: '<h1>INVOICE</h1><p><strong>Invoice #:</strong> 001</p><p><strong>Date:</strong> 2025-01-01</p><hr><table><tr><th>Item</th><th>Qty</th><th>Price</th></tr><tr><td>Service</td><td>1</td><td>$0.00</td></tr></table><hr><p><strong>Total: $0.00</strong></p>' },
+  { id: 'notes', name: 'Meeting Notes', category: 'personal', content: '<h1>Meeting Notes</h1><p><strong>Date:</strong> <br><strong>Attendees:</strong></p><h2>Agenda</h2><ol><li>Topic 1</li><li>Topic 2</li></ol><h2>Action Items</h2><ul><li><span>Item 1</span></li><li><span>Item 2</span></li></ul>' },
+  { id: 'todo', name: 'To-Do List', category: 'personal', content: '<h1>To-Do List</h1><ul data-type="taskList"><li data-type="taskItem" data-checked="false">Task 1</li><li data-type="taskItem" data-checked="false">Task 2</li><li data-type="taskItem" data-checked="false">Task 3</li></ul>' },
+  { id: 'blog', name: 'Blog Post', category: 'writing', content: '<h1>Blog Post Title</h1><p>By Author Name</p><p>Introduction paragraph...</p><h2>Section 1</h2><p>Content here.</p><h2>Section 2</h2><p>More content.</p><p>Conclusion.</p>' },
+  { id: 'proposal', name: 'Project Proposal', category: 'business', content: '<h1>Project Proposal</h1><h2>Overview</h2><p>Brief description.</p><h2>Goals</h2><ul><li>Goal 1</li><li>Goal 2</li></ul><h2>Timeline</h2><table><tr><th>Phase</th><th>Duration</th></tr><tr><td>Phase 1</td><td>Week 1-2</td></tr><tr><td>Phase 2</td><td>Week 3-4</td></tr></table><h2>Budget</h2><p>$0.00</p>' },
+  { id: 'essay', name: 'Essay', category: 'academic', content: '<h1>Title</h1><p>Introduction with thesis statement.</p><h2>Body Paragraph 1</h2><p>Topic sentence and supporting evidence.</p><h2>Body Paragraph 2</h2><p>Topic sentence and supporting evidence.</p><h2>Conclusion</h2><p>Restate thesis and summarize.</p><p>References</p>' },
+  { id: 'readme', name: 'README', category: 'technical', content: '<h1>Project Name</h1><p>Description of the project.</p><h2>Installation</h2><pre><code>npm install</code></pre><h2>Usage</h2><pre><code>npm start</code></pre><h2>License</h2><p>MIT</p>' },
+];

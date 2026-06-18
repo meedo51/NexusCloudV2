@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   FiFolder, FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX, FiUser,
-  FiTrash2, FiStar, FiActivity, FiUpload, FiShield, FiServer,
+  FiTrash2, FiStar, FiActivity, FiUpload, FiShield, FiServer, FiFileText,
 } from 'react-icons/fi';
 import { filesApi, workspacesApi } from '../services/api';
 import { FileItem, FavoriteEntry, Workspace } from '../types';
@@ -52,6 +52,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     { icon: FiStar, label: 'Favorites', path: '/favorites', active: location.pathname === '/favorites' },
     { icon: FiTrash2, label: 'Trash', path: '/trash', active: location.pathname === '/trash' },
     { icon: FiShare2, label: 'Shared Links', path: '/shares', active: location.pathname === '/shares' },
+    { icon: FiFileText, label: 'Documents', path: '/documents', active: location.pathname === '/documents' },
     { icon: FiUser, label: 'Profile', path: '/profile', active: location.pathname === '/profile' },
   ];
 
@@ -188,3 +189,4 @@ export default function Sidebar({ onClose }: SidebarProps) {
     </aside>
   );
 }
+

@@ -21,6 +21,7 @@ import thumbnailRoutes from './routes/thumbnails';
 import workspaceRoutes from './routes/workspaces';
 import webdavRoutes from './routes/webdav';
 import searchRoutes from './routes/search';
+import documentRoutes from './routes/documents';
 import { jobQueue } from './services/queue';
 import { extractText, shouldExtract } from './services/text-extractor';
 
@@ -40,6 +41,7 @@ const ENABLE_FULLTEXT_SEARCH = process.env.ENABLE_FULLTEXT_SEARCH !== 'false';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/documents', documentRoutes);
 app.use('/api/versions', versionRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/upload-requests', uploadRequestRoutes);
@@ -140,3 +142,5 @@ if (!process.env.VITEST) {
 }
 
 export default app;
+
+

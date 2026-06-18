@@ -18,6 +18,9 @@ import TwoFactorSetupPage from './pages/TwoFactorSetup';
 import WorkspaceDashboard from './pages/WorkspaceDashboard';
 import WorkspaceDetail from './pages/WorkspaceDetail';
 import WebDAVSettings from './pages/WebDAVSettings';
+import DocumentEditorPage from './pages/DocumentEditorPage';
+import DocumentsListPage from './pages/DocumentsListPage';
+import DocumentFileEditor from './pages/DocumentFileEditor';
 import LoadingScreen from './components/LoadingScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -57,8 +60,14 @@ export default function App() {
         <Route path="workspaces" element={<WorkspaceDashboard />} />
         <Route path="workspaces/:id" element={<WorkspaceDetail />} />
         <Route path="webdav" element={<WebDAVSettings />} />
+        <Route path="documents" element={<DocumentsListPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="\*" element={<Navigate to="/" replace />} />
+          <Route path="/documents/new" element={<ProtectedRoute><DocumentEditorPage /></ProtectedRoute>} />
+      <Route path="/documents/:docId" element={<ProtectedRoute><DocumentEditorPage /></ProtectedRoute>} />
+      <Route path="/document-editor/:fileId" element={<ProtectedRoute><DocumentFileEditor /></ProtectedRoute>} />
     </Routes>
   );
 }
+
+

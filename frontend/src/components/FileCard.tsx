@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   FiFile, FiFolder, FiImage, FiFileText, FiDownload,
   FiTrash2, FiEdit2, FiShare2, FiInfo, FiMove, FiEye,
-  FiArchive, FiCheckSquare, FiSquare, FiUnlock, FiStar, FiCode,
+  FiArchive, FiCheckSquare, FiSquare, FiUnlock, FiStar, FiCode, FiEdit3,
 } from 'react-icons/fi';
 import { FileItem } from '../types';
 import { filesApi } from '../services/api';
@@ -81,6 +81,8 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
      'application/x-httpd-php', 'application/x-python'].includes(file.mimeType || '') ||
     /\.(js|ts|jsx|tsx|mjs|cjs|mts|cts|html|htm|css|scss|less|py|rb|go|rs|java|cpp|c|cs|php|md|json|xml|yaml|yml|sql|sh|bash|zsh|env|gitignore|svg|toml|ini|cfg|vue|svelte|tf|dockerfile|makefile|graphql|gql)$/i.test(file.name)
   );
+
+  const isDocument = !file.isFolder && /\.(txt)$/i.test(file.name);
 
   const handleRename = async () => {
     if (!newName.trim() || newName === (file.originalName || file.name)) {
@@ -190,6 +192,7 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
         { id: 'preview', label: 'Preview', icon: <FiEye size={14} />, shortcut: 'Space', onClick: () => setShowPreview(true) },
         { id: 'download', label: 'Download', icon: <FiDownload size={14} />, onClick: handleDownload },
         ...(isEditable ? [{ id: 'edit', label: 'Open in Editor', icon: <FiCode size={14} />, onClick: () => navigate(`/editor/${file.id}`) }] : []),
+        ...(isDocument ? [{ id: 'doc-edit', label: 'Open in Document Editor', icon: <FiEdit3 size={14} />, onClick: () => navigate(`/document-editor/${file.id}`) }] : []),
         { id: 'rename', label: 'Rename', icon: <FiEdit2 size={14} />, shortcut: 'F2', onClick: () => { setNewName(file.originalName || file.name); setIsRenaming(true); } },
         { id: 'move', label: 'Move to...', icon: <FiMove size={14} />, onClick: () => setShowMove(true) },
         { id: 'share', label: 'Share', icon: <FiShare2 size={14} />, onClick: () => setShowShare(true) },
@@ -233,7 +236,12 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
               </button>
             ) : (
               <>
-                {isEditable && (
+                {isDocument && (
+                  <button onClick={() => navigate(`/document-editor/${file.id}`)} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Open in Document Editor">
+                    <FiEdit3 size={14} />
+                  </button>
+                )}
+                {isEditable && !isDocument && (
                   <button onClick={() => navigate(`/editor/${file.id}`)} className="p-2 rounded-lg bg-space/80 hover:bg-space text-cyan/80 hover:text-cyan transition-colors" title="Open in Editor">
                     <FiCode size={14} />
                   </button>
@@ -332,7 +340,12 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
                 </button>
               ) : (
                 <>
-                  {isEditable && (
+                  {isDocument && (
+                    <button onClick={() => navigate(`/document-editor/${file.id}`)} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Open in Document Editor">
+                      <FiEdit3 size={16} />
+                    </button>
+                  )}
+                  {isEditable && !isDocument && (
                     <button onClick={() => navigate(`/editor/${file.id}`)} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors" title="Open in Editor">
                       <FiCode size={16} />
                     </button>

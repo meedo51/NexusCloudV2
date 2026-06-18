@@ -224,6 +224,51 @@ export interface SearchResponse {
   total: number;
 }
 
+export interface NexusDocument {
+  id: string;
+  name: string;
+  content: string;
+  ownerId: string;
+  folderId: string | null;
+  templateId: string | null;
+  wordCount: number;
+  characterCount: number;
+  version: number;
+  isLocked: boolean;
+  lockedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentVersion {
+  id: string;
+  documentId: string;
+  content: string;
+  versionNumber: number;
+  wordCount: number;
+  savedBy: string;
+  changeSummary: string;
+  createdAt: string;
+}
+
+export interface DocumentComment {
+  id: string;
+  documentId: string;
+  userId: string;
+  content: string;
+  selectionStart: number | null;
+  selectionEnd: number | null;
+  resolved: boolean;
+  createdAt: string;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  category: string;
+  content: string;
+}
+
 export interface FileInfo {
   id: string;
   name: string;
@@ -235,3 +280,5 @@ export interface FileInfo {
   createdAt: string;
   updatedAt: string;
 }
+
+

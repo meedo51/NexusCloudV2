@@ -3,7 +3,8 @@ import {
   AuthResponse, FileItem, ShareLink, ShareAccessResponse, FileContent,
   QuotaInfo, FavoriteEntry, BreadcrumbItem, FileVersion, ActivityLogEntry,
   UploadRequest, Workspace, WorkspaceMember, WorkspaceInvite, WorkspaceItem,
-  TwoFactorSetup, WebDAVInfo, SearchResponse, FileInfo,
+  TwoFactorSetup, WebDAVInfo, SearchResponse, FileInfo, NexusDocument,
+  DocumentVersion, DocumentTemplate,
 } from '../types';
 
 const api = axios.create({
@@ -211,6 +212,22 @@ const publicApi = axios.create({
 });
 publicApi.interceptors.response.use((res) => res, (err) => Promise.reject(err));
 
+export const documentsApi = {
+  list: () => api.get<NexusDocument[]>('/documents').then(r => r.data),
+  create: (data: { name?: string; content?: string; templateId?: string; folderId?: string }) =>
+    api.post<NexusDocument>('/documents', data).then(r => r.data),
+  get: (id: string) => api.get<NexusDocument>(`/documents/${id}`).then(r => r.data),
+  update: (id: string, data: { content?: string; name?: string; wordCount?: number; characterCount?: number }) =>
+    api.put<NexusDocument>(`/documents/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/documents/${id}`).then(r => r.data),
+  versions: (id: string) => api.get<DocumentVersion[]>(`/documents/${id}/versions`).then(r => r.data),
+  restore: (id: string, versionId: string) =>
+    api.post<NexusDocument>(`/documents/${id}/restore`, { versionId }).then(r => r.data),
+  export: (id: string, format: string) =>
+    api.post<{ message: string; path: string; format: string }>(`/documents/${id}/export`, { format }).then(r => r.data),
+  templates: () => api.get<DocumentTemplate[]>('/documents/templates').then(r => r.data),
+};
+
 export const shareApi = {
   create: (fileId: string, password?: string, expiresInDays?: number, permission?: string, allowUpload?: boolean) =>
     api.post<ShareLink>('/share', { fileId, password, expiresInDays, permission, allowUpload }).then(r => r.data),
@@ -235,3 +252,5 @@ export const shareApi = {
 };
 
 export default api;
+
+

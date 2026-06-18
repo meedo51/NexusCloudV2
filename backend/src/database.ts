@@ -245,6 +245,47 @@ export async function initializeDatabase(): Promise<void> {
         extractedAt TIMESTAMPTZ
       )
     `);
+            await client.query(`
+      CREATE TABLE IF NOT EXISTS documents (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        ownerId UUID NOT NULL,
+        folderId UUID,
+        templateId TEXT,
+        wordCount INTEGER NOT NULL DEFAULT 0,
+        characterCount INTEGER NOT NULL DEFAULT 0,
+        version INTEGER NOT NULL DEFAULT 1,
+        isLocked BOOLEAN NOT NULL DEFAULT FALSE,
+        lockedBy UUID,
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS document_versions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        documentId UUID NOT NULL,
+        content TEXT NOT NULL,
+        versionNumber INTEGER NOT NULL,
+        wordCount INTEGER NOT NULL DEFAULT 0,
+        savedBy UUID NOT NULL,
+        changeSummary TEXT DEFAULT '',
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS document_comments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        documentId UUID NOT NULL,
+        userId UUID NOT NULL,
+        content TEXT NOT NULL,
+        selectionStart INTEGER,
+        selectionEnd INTEGER,
+        resolved BOOLEAN NOT NULL DEFAULT FALSE,
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
     // Indexes
     await client.query('CREATE INDEX IF NOT EXISTS idx_files_userId ON files(userId)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_files_folderId ON files(folderId)');
@@ -341,3 +382,4 @@ export async function pruneVersions(fileId: string): Promise<void> {
 
 export { pool };
 export default { prepare };
+
