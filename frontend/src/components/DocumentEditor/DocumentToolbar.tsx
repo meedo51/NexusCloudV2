@@ -82,7 +82,7 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass rounded-2xl border border-white/5 p-2 flex flex-wrap items-center gap-1 overflow-x-auto"
+      className="glass rounded-2xl border border-white/5 p-2 flex flex-wrap items-center gap-1"
     >
       {/* Headings */}
       <div className="relative" ref={headingRef}>
