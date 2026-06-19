@@ -2,14 +2,20 @@
 
 .document-editor .ProseMirror {
   outline: none;
-  min-height: 500px;
-  color: #E2E8F0;
+  min-height: 600px;
   line-height: 1.75;
-  font-size: 1rem;
+  cursor: text;
+  caret-color: #00F0FF;
 }
 
 .document-editor .ProseMirror p {
   margin: 0.5em 0;
+}
+
+/* Dark mode (default) */
+.document-editor .ProseMirror {
+  color: #E2E8F0;
+  font-size: 1rem;
 }
 
 .document-editor .ProseMirror h1 { font-size: 2em; font-weight: 700; margin: 0.8em 0 0.4em; color: #F1F5F9; }
@@ -108,6 +114,7 @@
   margin: 1.5em 0;
 }
 
+/* Tables - Dark Mode */
 .document-editor .ProseMirror table {
   width: 100%;
   border-collapse: collapse;
@@ -117,16 +124,16 @@
 
 .document-editor .ProseMirror td,
 .document-editor .ProseMirror th {
-  border: 1px solid rgba(0, 240, 255, 0.15);
+  border: 2px solid rgba(0, 240, 255, 0.25);
   padding: 0.5em 0.75em;
   vertical-align: top;
   min-width: 60px;
 }
 
 .document-editor .ProseMirror th {
-  background: rgba(0, 240, 255, 0.05);
+  background: rgba(0, 240, 255, 0.08);
   font-weight: 600;
-  color: #CBD5E1;
+  color: #F1F5F9;
   text-align: left;
 }
 
@@ -134,18 +141,20 @@
   background: rgba(15, 21, 33, 0.3);
 }
 
-.document-editor .ProseMirror th:first-child,
-.document-editor .ProseMirror td:first-child {
-  border-left: none;
-}
-
-.document-editor .ProseMirror th:last-child,
-.document-editor .ProseMirror td:last-child {
-  border-right: none;
-}
-
 .document-editor .ProseMirror .selectedCell {
-  background: rgba(0, 240, 255, 0.08);
+  background: rgba(0, 240, 255, 0.12);
+}
+
+/* Table resize handle */
+.document-editor .ProseMirror .tableWrapper { overflow-x: auto; }
+.document-editor .ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: rgba(0, 240, 255, 0.4);
+  cursor: col-resize;
 }
 
 .document-editor .ProseMirror p.is-editor-empty:first-child::before {
@@ -167,25 +176,72 @@
 .document-editor .ProseMirror sub { font-size: 0.75em; vertical-align: sub; }
 .document-editor .ProseMirror sup { font-size: 0.75em; vertical-align: super; }
 
-/* Table handles */
-.document-editor .ProseMirror .tableWrapper { overflow-x: auto; }
-.document-editor .ProseMirror .column-resize-handle {
-  position: absolute;
-  right: -2px;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: rgba(0, 240, 255, 0.3);
-  cursor: col-resize;
-}
-
-/* Selection highlight */
+/* Selection */
 .document-editor .ProseMirror ::selection {
   background: rgba(0, 240, 255, 0.15);
 }
 
 .document-editor .ProseMirror ::-moz-selection {
   background: rgba(0, 240, 255, 0.15);
+}
+
+/* === WHITE PAGE MODE === */
+.document-editor .ProseMirror.white-page {
+  color: #1E293B !important;
+  caret-color: #0EA5E9;
+}
+.document-editor .ProseMirror.white-page h1 { color: #0F172A; }
+.document-editor .ProseMirror.white-page h2 { color: #1E293B; border-bottom-color: rgba(0, 0, 0, 0.1); }
+.document-editor .ProseMirror.white-page h3 { color: #334155; }
+.document-editor .ProseMirror.white-page h4 { color: #475569; }
+.document-editor .ProseMirror.white-page h5,
+.document-editor .ProseMirror.white-page h6 { color: #64748B; }
+.document-editor .ProseMirror.white-page a { color: #0EA5E9; }
+.document-editor .ProseMirror.white-page a:hover { color: #0284C7; }
+.document-editor .ProseMirror.white-page blockquote {
+  color: #64748B;
+  background: rgba(255, 107, 107, 0.03);
+}
+.document-editor .ProseMirror.white-page pre {
+  background: #F1F5F9;
+  border-color: #E2E8F0;
+  color: #1E293B;
+}
+.document-editor .ProseMirror.white-page code {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0EA5E9;
+}
+.document-editor .ProseMirror.white-page th {
+  background: rgba(14, 165, 233, 0.06);
+  color: #1E293B;
+}
+.document-editor .ProseMirror.white-page td {
+  background: rgba(0, 0, 0, 0.02);
+}
+.document-editor .ProseMirror.white-page td,
+.document-editor .ProseMirror.white-page th {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+.document-editor .ProseMirror.white-page .selectedCell {
+  background: rgba(14, 165, 233, 0.08);
+}
+.document-editor .ProseMirror.white-page ::selection {
+  background: rgba(14, 165, 233, 0.2);
+}
+.document-editor .ProseMirror.white-page p.is-editor-empty:first-child::before {
+  color: rgba(148, 163, 184, 0.5);
+}
+.document-editor .ProseMirror.white-page hr {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+.document-editor .ProseMirror.white-page img {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+.document-editor .ProseMirror.white-page s {
+  color: #94A3B8;
+}
+.document-editor .ProseMirror.white-page ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  color: #94A3B8;
 }
 
 /* Bubble menu overrides */
