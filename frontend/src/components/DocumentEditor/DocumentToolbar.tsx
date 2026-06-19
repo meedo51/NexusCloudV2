@@ -3,9 +3,9 @@ import { useCallback, useState, useRef, useEffect } from 'react';
 import {
   FiBold, FiItalic, FiUnderline, FiCode, FiLink, FiImage,
   FiList, FiCheckSquare, FiMinus, FiAlignLeft, FiAlignCenter, FiAlignRight,
-  FiChevronDown, FiType, FiHash, FiTable, FiSun, FiMoon,
+  FiChevronDown, FiType, FiHash, FiTable, FiSun, FiMoon, FiMenu, FiX,
 } from 'react-icons/fi';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ToolbarButton from './ToolbarButton';
 
 interface DocumentToolbarProps {
@@ -37,15 +37,18 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
   const [showHeading, setShowHeading] = useState(false);
   const [showFontFamily, setShowFontFamily] = useState(false);
   const [showFontSize, setShowFontSize] = useState(false);
+  const [showMobile, setShowMobile] = useState(false);
   const headingRef = useRef<HTMLDivElement>(null);
   const fontFamilyRef = useRef<HTMLDivElement>(null);
   const fontSizeRef = useRef<HTMLDivElement>(null);
+  const mobileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (headingRef.current && !headingRef.current.contains(e.target as Node)) setShowHeading(false);
       if (fontFamilyRef.current && !fontFamilyRef.current.contains(e.target as Node)) setShowFontFamily(false);
       if (fontSizeRef.current && !fontSizeRef.current.contains(e.target as Node)) setShowFontSize(false);
+      if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) setShowMobile(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -78,16 +81,11 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
 
   const Divider = () => <div className="w-px h-6 bg-white/10 mx-1 shrink-0" />;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass rounded-2xl border border-white/5 p-2 flex flex-wrap items-center gap-1"
-    >
-      {/* Headings */}
+  const toolGroups = (
+    <>
       <div className="relative" ref={headingRef}>
         <button
-          onClick={() => { setShowHeading(!showHeading); setShowFontFamily(false); setShowFontSize(false); }}
+          onMouseDown={(e) => { e.preventDefault(); setShowHeading(!showHeading); setShowFontFamily(false); setShowFontSize(false); }}
           className="p-2 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 flex items-center gap-1"
           title="Heading"
         >
@@ -98,7 +96,7 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
         {showHeading && (
           <div className="absolute top-full left-0 mt-1 glass-strong rounded-xl border border-white/5 p-2 z-50 min-w-[140px] shadow-2xl">
             <button
-              onClick={() => { editor.chain().focus().setParagraph().run(); setShowHeading(false); }}
+              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setParagraph().run(); setShowHeading(false); }}
               className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all ${!headingLevel ? 'text-cyan bg-cyan/10' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
             >
               Paragraph
@@ -106,7 +104,7 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
             {[1, 2, 3, 4, 5, 6].map(level => (
               <button
                 key={level}
-                onClick={() => { editor.chain().focus().toggleHeading({ level: level as any }).run(); setShowHeading(false); }}
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: level as any }).run(); setShowHeading(false); }}
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all ${
                   editor.isActive('heading', { level }) ? 'text-cyan bg-cyan/10' : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
@@ -118,10 +116,9 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
         )}
       </div>
 
-      {/* Font Family */}
       <div className="relative" ref={fontFamilyRef}>
         <button
-          onClick={() => { setShowFontFamily(!showFontFamily); setShowHeading(false); setShowFontSize(false); }}
+          onMouseDown={(e) => { e.preventDefault(); setShowFontFamily(!showFontFamily); setShowHeading(false); setShowFontSize(false); }}
           className="p-2 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 flex items-center gap-1"
           title="Font Family"
         >
@@ -133,7 +130,7 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
             {FONT_FAMILIES.map(family => (
               <button
                 key={family}
-                onClick={() => setFontFamily(family)}
+                onMouseDown={(e) => { e.preventDefault(); setFontFamily(family); }}
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all ${
                   currentFont === family ? 'text-cyan bg-cyan/10' : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
@@ -146,10 +143,9 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
         )}
       </div>
 
-      {/* Font Size */}
       <div className="relative" ref={fontSizeRef}>
         <button
-          onClick={() => { setShowFontSize(!showFontSize); setShowHeading(false); setShowFontFamily(false); }}
+          onMouseDown={(e) => { e.preventDefault(); setShowFontSize(!showFontSize); setShowHeading(false); setShowFontFamily(false); }}
           className="p-2 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 flex items-center gap-1"
           title="Font Size"
         >
@@ -161,7 +157,7 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
             {FONT_SIZES.map(size => (
               <button
                 key={size}
-                onClick={() => setFontSize(size)}
+                onMouseDown={(e) => { e.preventDefault(); setFontSize(size); }}
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all ${
                   currentSize === size ? 'text-cyan bg-cyan/10' : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
@@ -175,7 +171,6 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
 
       <Divider />
 
-      {/* Text formatting */}
       <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold (Ctrl+B)"><FiBold size={15} /></ToolbarButton>
       <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic (Ctrl+I)"><FiItalic size={15} /></ToolbarButton>
       <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Underline (Ctrl+U)"><FiUnderline size={15} /></ToolbarButton>
@@ -184,14 +179,12 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
 
       <Divider />
 
-      {/* Alignment */}
       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Align Left"><FiAlignLeft size={15} /></ToolbarButton>
       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Center"><FiAlignCenter size={15} /></ToolbarButton>
       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Align Right"><FiAlignRight size={15} /></ToolbarButton>
 
       <Divider />
 
-      {/* Lists & blocks */}
       <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet List"><FiList size={15} /></ToolbarButton>
       <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Ordered List"><FiHash size={15} /></ToolbarButton>
       <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} title="Checklist"><FiCheckSquare size={15} /></ToolbarButton>
@@ -200,19 +193,60 @@ export default function DocumentToolbar({ editor, onToggleWhitePage, isWhitePage
 
       <Divider />
 
-      {/* Insert */}
       <ToolbarButton onClick={addLink} active={editor.isActive('link')} title="Link"><FiLink size={15} /></ToolbarButton>
       <ToolbarButton onClick={onOpenImageModal} active={false} title="Image"><FiImage size={15} /></ToolbarButton>
       <ToolbarButton onClick={addTable} active={editor.isActive('table')} title="Table"><FiTable size={15} /></ToolbarButton>
 
       <Divider />
 
-      {/* White page toggle */}
       {onToggleWhitePage && (
         <ToolbarButton onClick={onToggleWhitePage} active={!!isWhitePage} title={isWhitePage ? 'Dark mode' : 'Light mode'}>
           {isWhitePage ? <FiMoon size={15} /> : <FiSun size={15} />}
         </ToolbarButton>
       )}
-    </motion.div>
+    </>
+  );
+
+  return (
+    <div className="relative" ref={mobileRef}>
+      {/* Mobile toggle button */}
+      <button
+        onMouseDown={(e) => { e.preventDefault(); setShowMobile(!showMobile); }}
+        className="md:hidden glass rounded-2xl border border-white/5 p-2 flex items-center gap-2 text-white/60 hover:text-white hover:bg-white/5 transition-all w-full"
+      >
+        <FiMenu size={16} />
+        <span className="text-xs">Formatting tools</span>
+        <div className="ml-auto flex items-center gap-1.5 text-white/30">
+          {headingLevel && <span className="text-xs">H{headingLevel}</span>}
+          <span className="text-xs">{cleanFontName(currentFont)}, {currentSize}</span>
+        </div>
+      </button>
+
+      {/* Desktop toolbar */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="hidden md:flex glass rounded-2xl border border-white/5 p-2 flex-wrap items-center gap-1"
+      >
+        {toolGroups}
+      </motion.div>
+
+      {/* Mobile dropdown */}
+      <AnimatePresence>
+        {showMobile && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scaleY: 0.95 }}
+            animate={{ opacity: 1, y: 0, scaleY: 1 }}
+            exit={{ opacity: 0, y: -8, scaleY: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="md:hidden absolute top-full left-0 right-0 mt-2 glass-strong rounded-2xl border border-white/10 p-3 z-[9999] shadow-2xl max-h-[60vh] overflow-y-auto custom-scrollbar"
+          >
+            <div className="flex flex-wrap items-center gap-1">
+              {toolGroups}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
