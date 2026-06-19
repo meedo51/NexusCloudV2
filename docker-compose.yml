@@ -38,7 +38,7 @@ services:
       - DB_SSL=false
       - DATABASE_URL=postgresql://${DB_USER:-nexuscloud}:${DB_PASSWORD:-changeme}@postgres:5432/nexuscloud
       - UPLOAD_DIR=/app/uploads
-      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:9000,http://localhost:3000}
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-52428800}
       - ENABLE_2FA=true
       - ENABLE_WEBDAV=true
