@@ -42,38 +42,47 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
 
 // Update document content
 router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
-  const userId = req.user!.userId as string;
-  const docId = req.params.id as string;
-  const { content, name, wordCount, characterCount } = req.body as {
-    content?: string; name?: string; wordCount?: number; characterCount?: number;
-  };
-  const existing = await prepare(
-    'SELECT * FROM documents WHERE id = $1 AND ownerId = $2'
-  ).get(docId, userId) as any;
-  if (!existing) return res.status(404).json({ error: 'Document not found' });
+  try {
+    const userId = req.user!.userId as string;
+    const docId = req.params.id as string;
+    const { content, name, wordCount, characterCount } = req.body as {
+      content?: string; name?: string; wordCount?: number; characterCount?: number;
+    };
+    const existing = await prepare(
+      'SELECT * FROM documents WHERE id = $? AND ownerId = $?'
+    ).get(docId, userId) as any;
+    if (!existing) return res.status(404).json({ error: 'Document not found' });
 
-  // Save version backup
-  await prepare(
-    `INSERT INTO document_versions (documentId, content, versionNumber, wordCount, savedBy)
-     VALUES ($1, $2, $3, $4, $5)`
-  ).run(docId, existing.content, existing.version, existing.wordCount, userId);
+    // Save version backup (best-effort)
+    try {
+      await prepare(
+        `INSERT INTO document_versions (documentId, content, versionNumber, wordCount, savedBy)
+         VALUES ($?, $?, $?, $?, $?)`
+      ).run(docId, existing.content, existing.version, existing.wordCount, userId);
+    } catch (verr: any) {
+      console.error('Version backup failed (non-fatal):', verr.message);
+    }
 
-  const newVersion = existing.version + 1;
-  const updated = await prepare(
-    `UPDATE documents SET
-      content = COALESCE($1, content),
-      name = COALESCE($2, name),
-      wordCount = COALESCE($3, wordCount),
-      characterCount = COALESCE($4, characterCount),
-      version = $5,
-      updatedAt = NOW()
-     WHERE id = $6 RETURNING *`
-  ).get(
-    content ?? null, name ?? null,
-    wordCount ?? null, characterCount ?? null,
-    newVersion, docId
-  );
-  res.json(updated);
+    const newVersion = existing.version + 1;
+    const updated = await prepare(
+      `UPDATE documents SET
+        content = COALESCE($?, content),
+        name = COALESCE($?, name),
+        wordCount = COALESCE($?, wordCount),
+        characterCount = COALESCE($?, characterCount),
+        version = $?,
+        updatedAt = NOW()
+       WHERE id = $? RETURNING *`
+    ).get(
+      content ?? null, name ?? null,
+      wordCount ?? null, characterCount ?? null,
+      newVersion, docId
+    );
+    res.json(updated);
+  } catch (err: any) {
+    console.error('Document update error:', err.message, err.stack);
+    res.status(500).json({ error: 'Document update failed', detail: err.message });
+  }
 });
 
 // Delete document
