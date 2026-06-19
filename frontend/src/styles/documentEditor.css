@@ -1,0 +1,308 @@
+/* Document Editor - TipTap Styles */
+
+/* CSS Variables for theming */
+.document-editor {
+  --editor-bg: #0B0F19;
+  --editor-text: #E2E8F0;
+  --editor-toolbar-bg: rgba(15, 21, 33, 0.6);
+  --editor-border: rgba(255, 255, 255, 0.05);
+  --editor-hover: rgba(255, 255, 255, 0.05);
+  --editor-active: #00F0FF;
+  --editor-active-bg: rgba(0, 240, 255, 0.15);
+  --editor-accent: #FF6B6B;
+  --editor-dropdown-bg: rgba(15, 21, 33, 0.95);
+  --editor-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --editor-selection: rgba(0, 240, 255, 0.15);
+  --editor-code-bg: rgba(15, 21, 33, 0.8);
+  --editor-blockquote-border: #FF6B6B;
+  --editor-placeholder: rgba(148, 163, 184, 0.3);
+  --editor-table-border: rgba(0, 240, 255, 0.25);
+  --editor-table-header-bg: rgba(0, 240, 255, 0.08);
+  --editor-table-cell-bg: rgba(15, 21, 33, 0.3);
+  --editor-selected-cell: rgba(0, 240, 255, 0.12);
+  --editor-caret: #00F0FF;
+  color-scheme: dark;
+}
+
+.document-editor.white-page {
+  --editor-bg: #ffffff;
+  --editor-text: #1E293B;
+  --editor-toolbar-bg: rgba(255, 255, 255, 0.9);
+  --editor-border: rgba(0, 0, 0, 0.1);
+  --editor-hover: rgba(0, 0, 0, 0.05);
+  --editor-active: #0EA5E9;
+  --editor-active-bg: rgba(14, 165, 233, 0.1);
+  --editor-accent: #FF6B6B;
+  --editor-dropdown-bg: rgba(255, 255, 255, 0.98);
+  --editor-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  --editor-selection: rgba(14, 165, 233, 0.2);
+  --editor-code-bg: #F1F5F9;
+  --editor-blockquote-border: #FF6B6B;
+  --editor-placeholder: rgba(148, 163, 184, 0.5);
+  --editor-table-border: rgba(0, 0, 0, 0.15);
+  --editor-table-header-bg: rgba(14, 165, 233, 0.06);
+  --editor-table-cell-bg: rgba(0, 0, 0, 0.02);
+  --editor-selected-cell: rgba(14, 165, 233, 0.08);
+  --editor-caret: #0EA5E9;
+  color-scheme: light;
+}
+
+/* Toolbar dropdown - fix z-index rendering below editor content */
+.document-editor .toolbar-wrapper {
+  position: relative;
+  z-index: 100;
+}
+
+.document-editor .dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  z-index: 9999;
+  min-width: 140px;
+  background: var(--editor-dropdown-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--editor-border);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: var(--editor-shadow);
+  animation: dropdownIn 0.15s ease-out;
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.document-editor .dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: all 0.12s ease;
+  cursor: pointer;
+  color: var(--editor-text);
+  opacity: 0.7;
+  background: transparent;
+  border: none;
+}
+
+.document-editor .dropdown-item:hover {
+  opacity: 1;
+  background: var(--editor-hover);
+}
+
+.document-editor .dropdown-item.active {
+  opacity: 1;
+  color: var(--editor-active);
+  background: var(--editor-active-bg);
+}
+
+/* ProseMirror Editor */
+.document-editor .ProseMirror {
+  outline: none;
+  min-height: 600px;
+  line-height: 1.75;
+  cursor: text;
+  caret-color: var(--editor-caret);
+  color: var(--editor-text);
+  font-size: 1rem;
+}
+
+.document-editor .ProseMirror p {
+  margin: 0.5em 0;
+}
+
+.document-editor .ProseMirror h1 { font-size: 2em; font-weight: 700; margin: 0.8em 0 0.4em; color: var(--editor-text); }
+.document-editor .ProseMirror h2 { font-size: 1.5em; font-weight: 600; margin: 0.7em 0 0.3em; color: var(--editor-text); border-bottom: 1px solid var(--editor-table-border); padding-bottom: 0.2em; }
+.document-editor .ProseMirror h3 { font-size: 1.25em; font-weight: 600; margin: 0.6em 0 0.3em; }
+.document-editor .ProseMirror h4 { font-size: 1.1em; font-weight: 600; margin: 0.5em 0 0.2em; opacity: 0.8; }
+.document-editor .ProseMirror h5, .document-editor .ProseMirror h6 { font-size: 1em; font-weight: 600; margin: 0.5em 0 0.2em; opacity: 0.7; }
+
+.document-editor .ProseMirror a { color: var(--editor-active); text-decoration: underline; cursor: pointer; }
+.document-editor .ProseMirror a:hover { opacity: 0.8; }
+
+.document-editor .ProseMirror blockquote {
+  border-left: 3px solid var(--editor-blockquote-border);
+  padding: 0.5em 1em;
+  margin: 1em 0;
+  background: color-mix(in srgb, var(--editor-blockquote-border) 5%, transparent);
+  border-radius: 0 8px 8px 0;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.document-editor .ProseMirror pre {
+  background: var(--editor-code-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: 12px;
+  padding: 1em 1.5em;
+  margin: 1em 0;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.9em;
+  color: var(--editor-text);
+}
+
+.document-editor .ProseMirror pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+.document-editor .ProseMirror code {
+  background: var(--editor-active-bg);
+  color: var(--editor-active);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.document-editor .ProseMirror ul,
+.document-editor .ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.document-editor .ProseMirror li { margin: 0.25em 0; }
+
+.document-editor .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.document-editor .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+.document-editor .ProseMirror ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  margin-top: 0.25em;
+}
+
+.document-editor .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  accent-color: var(--editor-active);
+  width: 1em;
+  height: 1em;
+}
+
+.document-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.document-editor .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1em 0;
+  border: 1px solid var(--editor-border);
+}
+
+.document-editor .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--editor-table-border);
+  margin: 1.5em 0;
+}
+
+/* Tables */
+.document-editor .ProseMirror table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  overflow: hidden;
+}
+
+.document-editor .ProseMirror td,
+.document-editor .ProseMirror th {
+  border: 2px solid var(--editor-table-border);
+  padding: 0.5em 0.75em;
+  vertical-align: top;
+  min-width: 60px;
+}
+
+.document-editor .ProseMirror th {
+  background: var(--editor-table-header-bg);
+  font-weight: 600;
+  text-align: left;
+}
+
+.document-editor .ProseMirror td {
+  background: var(--editor-table-cell-bg);
+}
+
+.document-editor .ProseMirror .selectedCell {
+  background: var(--editor-selected-cell);
+}
+
+.document-editor .ProseMirror .tableWrapper { overflow-x: auto; }
+.document-editor .ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--editor-active);
+  opacity: 0.4;
+  cursor: col-resize;
+}
+
+.document-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--editor-placeholder);
+  pointer-events: none;
+  height: 0;
+}
+
+.document-editor .ProseMirror s { text-decoration: line-through; opacity: 0.6; }
+.document-editor .ProseMirror mark {
+  background: rgba(255, 255, 0, 0.2);
+  color: inherit;
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+}
+
+.document-editor .ProseMirror sub { font-size: 0.75em; vertical-align: sub; }
+.document-editor .ProseMirror sup { font-size: 0.75em; vertical-align: super; }
+
+/* Selection */
+.document-editor .ProseMirror ::selection {
+  background: var(--editor-selection);
+}
+
+/* Bubble menu */
+.tippy-box[data-theme~='nexus'] {
+  background: var(--editor-dropdown-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--editor-border);
+  border-radius: 12px;
+  box-shadow: var(--editor-shadow);
+}
+
+.tippy-box[data-theme~='nexus'] .tippy-arrow { color: var(--editor-dropdown-bg); }
+
+/* Find/Replace decorations */
+.find-replace-match {
+  background: rgba(0, 240, 255, 0.15);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.find-replace-active {
+  background: rgba(255, 107, 107, 0.3);
+  border-radius: 2px;
+  padding: 0 1px;
+  box-shadow: 0 0 4px rgba(255, 107, 107, 0.3);
+}
