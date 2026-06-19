@@ -31,13 +31,17 @@ export default function MobileNav() {
   }, [menuOpen, location.pathname]);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (menuOpen && menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [menuOpen]);
 
   const navTo = (path: string) => {
@@ -72,7 +76,7 @@ export default function MobileNav() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-strong border-t border-white/5 z-30">
         <div className="flex items-center justify-around py-2 px-4">
           <button
-            onMouseDown={(e) => { e.preventDefault(); navTo('/'); }}
+            onClick={() => navTo('/')}
             className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
               location.pathname === '/' || location.pathname.startsWith('/folder/') ? 'text-cyan' : 'text-white/40'
             }`}
@@ -81,7 +85,7 @@ export default function MobileNav() {
             <span className="text-[10px]">Files</span>
           </button>
           <button
-            onMouseDown={(e) => { e.preventDefault(); navTo('/shares'); }}
+            onClick={() => navTo('/shares')}
             className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
               location.pathname === '/shares' ? 'text-cyan' : 'text-white/40'
             }`}
@@ -90,7 +94,7 @@ export default function MobileNav() {
             <span className="text-[10px]">Shares</span>
           </button>
           <button
-            onMouseDown={(e) => { e.preventDefault(); setMenuOpen(!menuOpen); }}
+            onClick={() => setMenuOpen(!menuOpen)}
             className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
               menuOpen ? 'text-cyan' : 'text-white/40'
             }`}
@@ -99,7 +103,7 @@ export default function MobileNav() {
             <span className="text-[10px]">Menu</span>
           </button>
           <button
-            onMouseDown={(e) => { e.preventDefault(); navTo('/profile'); }}
+            onClick={() => navTo('/profile')}
             className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
               location.pathname === '/profile' ? 'text-cyan' : 'text-white/40'
             }`}
@@ -133,7 +137,7 @@ export default function MobileNav() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 sticky top-0 glass-strong z-10">
                 <h2 className="text-sm font-semibold text-white/80">Navigation</h2>
                 <button
-                  onMouseDown={(e) => { e.preventDefault(); setMenuOpen(false); }}
+                  onClick={() => setMenuOpen(false)}
                   className="p-1.5 rounded-lg hover:bg-white/5 text-white/40"
                 >
                   <FiX size={18} />
@@ -145,7 +149,7 @@ export default function MobileNav() {
                 {navItems.map((item) => (
                   <button
                     key={item.path}
-                    onMouseDown={(e) => { e.preventDefault(); navTo(item.path); }}
+                    onClick={() => navTo(item.path)}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
                       item.active ? 'glass text-cyan shadow-sm' : 'text-white/60 hover:text-white hover:bg-white/5'
                     }`}
@@ -162,7 +166,7 @@ export default function MobileNav() {
                 {toolItems.map((item) => (
                   <button
                     key={item.path}
-                    onMouseDown={(e) => { e.preventDefault(); navTo(item.path); }}
+                    onClick={() => navTo(item.path)}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
                       item.active ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
                     }`}
@@ -181,7 +185,7 @@ export default function MobileNav() {
                     {folders.map((folder) => (
                       <button
                         key={folder.id}
-                        onMouseDown={(e) => { e.preventDefault(); navTo(`/folder/${folder.id}`); }}
+                        onClick={() => navTo(`/folder/${folder.id}`)}
                         className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
                           currentFolderId === folder.id ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
                         }`}
@@ -202,7 +206,7 @@ export default function MobileNav() {
                     {workspaces.map((ws) => (
                       <button
                         key={ws.id}
-                        onMouseDown={(e) => { e.preventDefault(); navTo(`/workspaces/${ws.id}`); }}
+                        onClick={() => navTo(`/workspaces/${ws.id}`)}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all text-white/60 hover:text-white hover:bg-white/5"
                       >
                         <FiServer size={14} className="text-cyan/60" />
@@ -221,7 +225,7 @@ export default function MobileNav() {
                     {favorites.map(fav => fav.item && (
                       <button
                         key={fav.id}
-                        onMouseDown={(e) => { e.preventDefault(); fav.item!.isFolder ? navTo(`/folder/${fav.item!.id}`) : fav.item!.folderId ? navTo(`/folder/${fav.item!.folderId}`) : navTo('/'); }}
+                        onClick={() => fav.item!.isFolder ? navTo(`/folder/${fav.item!.id}`) : fav.item!.folderId ? navTo(`/folder/${fav.item!.folderId}`) : navTo('/')}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all text-white/60 hover:text-white hover:bg-white/5"
                       >
                         <FiStar size={14} className="text-yellow/80" />
