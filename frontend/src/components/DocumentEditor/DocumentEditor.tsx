@@ -116,7 +116,7 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
             characterCount: ed.storage.characterCount?.characters?.() || 0,
           };
           setIsSaving(true);
-          onSaveRef.current(content, meta).finally(() => setIsSaving(false));
+          Promise.resolve(onSaveRef.current(content, meta)).finally(() => setIsSaving(false));
         }
         return;
       }
@@ -275,7 +275,6 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
           document={document}
           isOpen={showSidebar}
           onClose={() => setShowSidebar(false)}
-          whitePage={whitePage}
         />
       </div>
 
