@@ -20,6 +20,7 @@ function toPublic(u: User): UserPublic {
     usedStorageBytes: u.usedStorageBytes || 0,
     preferredView: u.preferredView || 'grid',
     two_factor_enabled: u.two_factor_enabled || false,
+    isAdmin: u.isAdmin || false,
     createdAt: u.createdAt,
   };
 }
@@ -43,10 +44,10 @@ router.post('/register', async (req: Request, res: Response) => {
   const passwordHash = bcrypt.hashSync(password, 10);
   await prepare('INSERT INTO users (id, username, email, passwordHash, displayName, createdAt) VALUES ($1, $2, $3, $4, $5, NOW())')
     .run(id, username, email, passwordHash, '');
-  const token = generateToken({ userId: id, username });
+  const token = generateToken({ userId: id, username, isAdmin: false });
   res.status(201).json({
     token,
-    user: { id, username, email, displayName: '', storageQuotaBytes: 3221225472, usedStorageBytes: 0, preferredView: 'grid', two_factor_enabled: false, createdAt: new Date().toISOString() },
+    user: { id, username, email, displayName: '', storageQuotaBytes: 3221225472, usedStorageBytes: 0, preferredView: 'grid', two_factor_enabled: false, isAdmin: false, createdAt: new Date().toISOString() },
   });
 });
 
@@ -88,12 +89,12 @@ router.post('/login', async (req: Request, res: Response) => {
       codes.splice(idx, 1);
       await prepare('UPDATE users SET backup_codes = $1 WHERE id = $2').run(JSON.stringify(codes), user.id);
     } else {
-      res.json({ require2FA: true, tempToken: generateToken({ userId: user.id, username: user.username }) });
+      res.json({ require2FA: true, tempToken: generateToken({ userId: user.id, username: user.username, isAdmin: user.isAdmin }) });
       return;
     }
   }
 
-  const token = generateToken({ userId: user.id, username: user.username });
+  const token = generateToken({ userId: user.id, username: user.username, isAdmin: user.isAdmin });
   await logActivity({ userId: user.id, action: 'login', ipAddress: String(req.ip || ''), userAgent: String(req.headers['user-agent'] || '') });
   res.json({ token, user: toPublic(user) });
 });
@@ -136,7 +137,7 @@ router.put('/password', authenticateToken, async (req: Request, res: Response) =
   if (!bcrypt.compareSync(currentPassword, user.passwordHash)) { res.status(401).json({ error: 'Current password is incorrect' }); return; }
   const passwordHash = bcrypt.hashSync(newPassword, 10);
   await prepare('UPDATE users SET passwordHash = $1 WHERE id = $2').run(passwordHash, userId);
-  const token = generateToken({ userId: user.id, username: user.username });
+  const token = generateToken({ userId: user.id, username: user.username, isAdmin: user.isAdmin });
   res.json({ message: 'Password updated successfully', token });
 });
 

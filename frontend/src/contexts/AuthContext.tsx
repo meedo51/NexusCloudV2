@@ -10,6 +10,7 @@ interface AuthContextType {
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   pending2FA: { tempToken: string; username: string; password: string } | null;
   verifyLogin2FA: (totpCode?: string, backupCode?: string) => Promise<void>;
   cancel2FA: () => void;
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, isAuthenticated: !!token, pending2FA, verifyLogin2FA, cancel2FA }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, isAuthenticated: !!token, isAdmin: user?.isAdmin ?? false, pending2FA, verifyLogin2FA, cancel2FA }}>
       {children}
     </AuthContext.Provider>
   );

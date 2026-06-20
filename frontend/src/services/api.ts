@@ -4,7 +4,9 @@ import {
   QuotaInfo, FavoriteEntry, BreadcrumbItem, FileVersion, ActivityLogEntry,
   UploadRequest, Workspace, WorkspaceMember, WorkspaceInvite, WorkspaceItem,
   TwoFactorSetup, WebDAVInfo, SearchResponse, FileInfo, NexusDocument,
-  DocumentVersion, DocumentTemplate,
+  DocumentVersion, DocumentTemplate, AdminStats, AdminUserListResponse,
+  AdminFileListResponse, AdminDocumentListResponse, AdminSettings,
+  AdminLogListResponse, SystemHealth,
 } from '../types';
 
 const api = axios.create({
@@ -249,6 +251,32 @@ export const shareApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data);
   },
+};
+
+export const adminApi = {
+  stats: () => api.get<AdminStats>('/admin/stats').then(r => r.data),
+  users: (params?: { page?: number; limit?: number; search?: string; isAdmin?: boolean; sortBy?: string; sortOrder?: string }) =>
+    api.get<AdminUserListResponse>('/admin/users', { params }).then(r => r.data),
+  createUser: (data: { username: string; email: string; password: string; displayName?: string; storageQuotaBytes?: number; isAdmin?: boolean }) =>
+    api.post<UserPublic>('/admin/users', data).then(r => r.data),
+  updateUser: (id: string, data: { username?: string; email?: string; password?: string; displayName?: string; storageQuotaBytes?: number; isAdmin?: boolean }) =>
+    api.put<UserPublic>(`/admin/users/${id}`, data).then(r => r.data),
+  deleteUser: (id: string) => api.delete(`/admin/users/${id}`).then(r => r.data),
+  files: (params?: { page?: number; limit?: number; search?: string; type?: string; userId?: string; sortBy?: string; sortOrder?: string }) =>
+    api.get<AdminFileListResponse>('/admin/files', { params }).then(r => r.data),
+  deleteFile: (id: string) => api.delete(`/admin/files/${id}`).then(r => r.data),
+  transferFile: (id: string, userId: string) =>
+    api.put<FileItem>(`/admin/files/${id}/transfer`, { userId }).then(r => r.data),
+  documents: (params?: { page?: number; limit?: number; search?: string; sortBy?: string; sortOrder?: string }) =>
+    api.get<AdminDocumentListResponse>('/admin/documents', { params }).then(r => r.data),
+  deleteDocument: (id: string) => api.delete(`/admin/documents/${id}`).then(r => r.data),
+  settings: () => api.get<AdminSettings>('/admin/settings').then(r => r.data),
+  updateSettings: (settings: Record<string, string>) =>
+    api.put<{ message: string; settings: Record<string, string> }>('/admin/settings', { settings }).then(r => r.data),
+  logs: (params?: { page?: number; limit?: number; action?: string; userId?: string; startDate?: string; endDate?: string; search?: string }) =>
+    api.get<AdminLogListResponse>('/admin/logs', { params }).then(r => r.data),
+  health: () => api.get<SystemHealth>('/admin/health').then(r => r.data),
+  seedAdmin: () => api.post<{ message: string; created: boolean }>('/admin/seed-admin').then(r => r.data),
 };
 
 export default api;

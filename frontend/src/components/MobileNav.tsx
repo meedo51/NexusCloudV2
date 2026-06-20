@@ -13,7 +13,7 @@ import type { FileItem, FavoriteEntry, Workspace } from '../types';
 export default function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [folders, setFolders] = useState<FileItem[]>([]);
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
@@ -208,6 +208,7 @@ export default function MobileNav() {
                         { icon: FiServer, label: 'Workspaces', path: '/workspaces' },
                         { icon: FiServer, label: 'WebDAV', path: '/webdav' },
                         { icon: FiShield, label: '2FA Settings', path: '/2fa' },
+                        ...(isAdmin ? [{ icon: FiShield, label: 'Admin Panel', path: '/admin' }] : []),
                       ].map(item => (
                         <button key={item.path} onClick={() => navTo(item.path)}
                           className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${

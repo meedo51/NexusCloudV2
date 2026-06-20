@@ -22,6 +22,7 @@ import workspaceRoutes from './routes/workspaces';
 import webdavRoutes from './routes/webdav';
 import searchRoutes from './routes/search';
 import documentRoutes from './routes/documents';
+import adminRoutes from './routes/admin';
 import { jobQueue } from './services/queue';
 import { extractText, shouldExtract } from './services/text-extractor';
 
@@ -49,6 +50,7 @@ const ENABLE_FULLTEXT_SEARCH = process.env.ENABLE_FULLTEXT_SEARCH !== 'false';
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/versions', versionRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/upload-requests', uploadRequestRoutes);

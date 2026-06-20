@@ -7,7 +7,78 @@ export interface User {
   usedStorageBytes: number;
   preferredView?: string;
   two_factor_enabled?: boolean;
+  isAdmin: boolean;
   createdAt: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalFiles: number;
+  totalFolders: number;
+  totalStorage: number;
+  totalDocuments: number;
+  activeUsers24h: number;
+  recentRegistrations: number;
+  storageByType: { mimeType: string; count: number; totalSize: number }[];
+  storageGrowth: { date: string; total: number }[];
+  topUsers: { id: string; username: string; email: string; storageQuotaBytes: number; usedStorageBytes: number; fileCount: number }[];
+}
+
+export interface AdminUserListResponse {
+  users: UserPublic[];
+  total: number;
+  page: number;
+}
+
+export interface UserPublic {
+  id: string;
+  username: string;
+  email: string;
+  displayName: string;
+  storageQuotaBytes: number;
+  usedStorageBytes: number;
+  preferredView: string;
+  two_factor_enabled: boolean;
+  isAdmin: boolean;
+  createdAt: string;
+}
+
+export interface AdminFileListResponse {
+  files: FileItem[];
+  total: number;
+  page: number;
+}
+
+export interface AdminDocumentListResponse {
+  documents: any[];
+  total: number;
+  page: number;
+}
+
+export interface AdminSettings {
+  CORS_ORIGIN: string;
+  MAX_FILE_SIZE: string;
+  ENABLE_2FA: string;
+  ENABLE_WEBDAV: string;
+  ENABLE_FULLTEXT_SEARCH: string;
+  MAX_FILE_VERSIONS: string;
+  nodeVersion: string;
+  platform: string;
+  uptime: number;
+}
+
+export interface AdminLogListResponse {
+  logs: ActivityLogEntry[];
+  total: number;
+  page: number;
+}
+
+export interface SystemHealth {
+  database: { connected: boolean; latencyMs: number };
+  disk: { total: number; free: number; usedPercent: number };
+  memory: { rss: number; heapTotal: number; heapUsed: number; external: number };
+  cpu: { loadAvg: number[] };
+  uptime: number;
 }
 
 export interface FileItem {

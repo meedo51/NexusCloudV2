@@ -10,6 +10,7 @@ import { filesApi, workspacesApi } from '../services/api';
 import { FileItem, FavoriteEntry, Workspace } from '../types';
 import toast from 'react-hot-toast';
 import FolderIcon from './Icons/FolderIcon';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
   onClose: () => void;
@@ -18,6 +19,7 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useAuth();
   const [folders, setFolders] = useState<FileItem[]>([]);
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -148,6 +150,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 { icon: FiServer, label: 'Workspaces', path: '/workspaces', startsWith: true },
                 { icon: FiServer, label: 'WebDAV', path: '/webdav' },
                 { icon: FiShield, label: '2FA Settings', path: '/2fa' },
+                ...(isAdmin ? [{ icon: FiShield, label: 'Admin Panel', path: '/admin' }] : []),
               ].map(item => (
                 <button key={item.path} onClick={() => navigate(item.path)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${

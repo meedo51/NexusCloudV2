@@ -110,6 +110,7 @@ export async function initializeDatabase(): Promise<void> {
         two_factor_secret TEXT,
         two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
         backup_codes JSONB DEFAULT '[]',
+        isAdmin BOOLEAN NOT NULL DEFAULT FALSE,
         createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);

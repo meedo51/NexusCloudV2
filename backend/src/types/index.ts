@@ -10,6 +10,7 @@ export interface User {
   two_factor_secret: string | null;
   two_factor_enabled: boolean;
   backup_codes: string;
+  isAdmin: boolean;
   createdAt: string;
 }
 
@@ -22,6 +23,7 @@ export interface UserPublic {
   usedStorageBytes: number;
   preferredView: string;
   two_factor_enabled: boolean;
+  isAdmin: boolean;
   createdAt: string;
 }
 
@@ -114,6 +116,7 @@ export interface Folder {
 export interface JwtPayload {
   userId: string;
   username: string;
+  isAdmin: boolean;
 }
 
 // Tier 3 types

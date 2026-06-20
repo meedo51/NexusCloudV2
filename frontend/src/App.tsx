@@ -22,12 +22,21 @@ import DocumentEditorPage from './pages/DocumentEditorPage';
 import DocumentsListPage from './pages/DocumentsListPage';
 import StudioPage from './pages/StudioPage';
 import DocumentFileEditor from './pages/DocumentFileEditor';
+import AdminDashboard from './pages/AdminDashboard';
 import LoadingScreen from './components/LoadingScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -63,6 +72,7 @@ export default function App() {
         <Route path="webdav" element={<WebDAVSettings />} />
         <Route path="documents" element={<DocumentsListPage />} />
         <Route path="studio" element={<StudioPage />} />
+        <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
       </Route>
       <Route path="\*" element={<Navigate to="/" replace />} />
           <Route path="/documents/new" element={<ProtectedRoute><DocumentEditorPage /></ProtectedRoute>} />
