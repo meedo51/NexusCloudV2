@@ -1,39 +1,104 @@
-name: Auto-Deploy NexusCloud
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexuscloud-postgres
+    environment:
+      - POSTGRES_DB=nexuscloud
+      - POSTGRES_USER=${DB_USER:-nexuscloud}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexuscloud -d nexuscloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"  # Moved here from webhook
+    networks:
+      - nexuscloud-net
 
-on:
-  push:
-    branches: [ main, master ]
-  workflow_dispatch:  # Manual trigger
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    container_name: nexuscloud-backend
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - JWT_SECRET=${JWT_SECRET:-change-this-to-a-random-secret-in-production}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=nexuscloud
+      - DB_USER=${DB_USER:-nexuscloud}
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - DB_SSL=false
+      - DATABASE_URL=postgresql://${DB_USER:-nexuscloud}:${DB_PASSWORD:-changeme}@postgres:5432/nexuscloud
+      - UPLOAD_DIR=/app/uploads
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:9000,http://localhost:3000}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-52428800}
+      - ENABLE_2FA=true
+      - ENABLE_WEBDAV=true
+      - ENABLE_FULLTEXT_SEARCH=true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - ${BACKEND_PORT:-5000}:4000
+    volumes:
+      - uploads:/app/uploads
+    networks:
+      - nexuscloud-net
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Deploy to Server
-      uses: appleboy/ssh-action@v0.1.10
-      with:
-        host: ${{ secrets.DEPLOY_HOST }}
-        username: ${{ secrets.DEPLOY_USERNAME }}
-        key: ${{ secrets.DEPLOY_SSH_KEY }}
-        port: ${{ secrets.DEPLOY_PORT || 22 }}
-        script: |
-          cd /root/NexusCloudV2
-          echo "Pulling latest changes..."
-          git pull origin main
-          
-          echo "Rebuilding containers..."
-          docker compose down
-          docker compose build --no-cache
-          docker compose up -d
-          
-          echo "Running migrations..."
-          docker exec nexuscloud-backend npm run db:migrate
-          
-          echo "Health check..."
-          sleep 10
-          if curl -s http://localhost:5000/api/health | grep -q '"status":"ok"'; then
-            echo "✅ Deployment successful!"
-          else
-            echo "❌ Health check failed!"
-            exit 1
-          fi
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_URL: /api
+    container_name: nexuscloud-frontend
+    restart: unless-stopped
+    ports:
+      - ${FRONTEND_PORT:-9000}:80
+    networks:
+      - nexuscloud-net
+
+  # ✅ Webhook service - properly defined as a separate service
+  webhook:
+    build:
+      context: .
+      dockerfile: Dockerfile.webhook
+    container_name: nexuscloud-webhook
+    restart: unless-stopped
+    environment:
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - PORT=9001
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/NexusCloudV2/deploy.sh:/root/NexusCloudV2/deploy.sh:ro
+      - /root/NexusCloudV2:/root/NexusCloudV2:ro
+      - ./simple-webhook.js:/app/simple-webhook.js:ro  # Mount webhook handler
+    ports:
+      - "9001:9001"
+    networks:
+      - nexuscloud-net
+
+networks:
+  nexuscloud-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads:
+    driver: local
