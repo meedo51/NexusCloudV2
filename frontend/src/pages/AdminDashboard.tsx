@@ -592,7 +592,7 @@ export default function AdminDashboard() {
                         outerRadius={100}
                         paddingAngle={3}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
                       >
                         {pieData.map((_, idx) => (
                           <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
@@ -600,7 +600,7 @@ export default function AdminDashboard() {
                       </Pie>
                       <Tooltip
                         contentStyle={{ background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
-                        formatter={(value: number) => formatBytes(value)}
+                      formatter={(value: any) => formatBytes(Number(value))}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -616,10 +616,10 @@ export default function AdminDashboard() {
                     <BarChart data={stats.topUsers.map(u => ({ name: u.username, storage: u.usedStorageBytes }))}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                       <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 12 }} />
-                      <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 12 }} tickFormatter={(v) => formatBytes(v)} />
+                      <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 12 }} tickFormatter={(v: any) => formatBytes(Number(v))} />
                       <Tooltip
                         contentStyle={{ background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
-                        formatter={(value: number) => formatBytes(value)}
+                        formatter={(value: any) => formatBytes(Number(value))}
                       />
                       <Bar dataKey="storage" fill="#00E5FF" radius={[4, 4, 0, 0]} />
                     </BarChart>
@@ -643,10 +643,10 @@ export default function AdminDashboard() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                     <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 12 }} />
-                    <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 12 }} tickFormatter={(v) => formatBytes(v)} />
+                    <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 12 }} tickFormatter={(v: any) => formatBytes(Number(v))} />
                     <Tooltip
                       contentStyle={{ background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
-                      formatter={(value: number) => formatBytes(value)}
+                      formatter={(value: any) => formatBytes(Number(value))}
                     />
                     <Area type="monotone" dataKey="total" stroke="#00E5FF" fillOpacity={1} fill="url(#colorStorage)" />
                   </AreaChart>

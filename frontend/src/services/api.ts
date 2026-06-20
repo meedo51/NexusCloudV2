@@ -6,7 +6,7 @@ import {
   TwoFactorSetup, WebDAVInfo, SearchResponse, FileInfo, NexusDocument,
   DocumentVersion, DocumentTemplate, AdminStats, AdminUserListResponse,
   AdminFileListResponse, AdminDocumentListResponse, AdminSettings,
-  AdminLogListResponse, SystemHealth,
+  AdminLogListResponse, SystemHealth, UserPublic,
 } from '../types';
 
 const api = axios.create({
