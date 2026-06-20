@@ -20,7 +20,7 @@ import Superscript from '@tiptap/extension-superscript';
 import StarterKit from '@tiptap/starter-kit';
 import { motion } from 'framer-motion';
 import {
-  FiChevronLeft, FiDownload, FiClock, FiSave, FiMenu,
+  FiDownload, FiClock, FiSave, FiMenu,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import DocumentToolbar from './DocumentToolbar';
@@ -32,6 +32,7 @@ import FindReplaceDialog from './FindReplaceDialog';
 import ImageInsertModal from './ImageInsertModal';
 import ImageToolbar from './ImageToolbar';
 import TableProperties from './TableProperties';
+import BackButton from './BackButton';
 import { FindReplaceExtension } from '../../extensions/FindReplaceExtension';
 import { FontSizeExtension } from '../../extensions/FontSizeExtension';
 import { ExtendedImage } from '../../extensions/ExtendedImage';
@@ -210,19 +211,8 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
     <div className={`document-editor ${whitePage ? 'white-page' : ''} fixed inset-0 z-50 overflow-hidden ${whitePage ? 'bg-white' : 'bg-[#0B0F19]'}`}>
       {!whitePage && <div className="gradient-mesh" />}
 
-      {/* Exit button */}
-      <motion.button
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        whileHover={{ scale: 1.05 }}
-        onMouseDown={(e) => { e.preventDefault(); onBack(); }}
-        className={`fixed top-4 left-4 z-50 glass rounded-2xl px-4 py-2 text-sm flex items-center gap-2 border transition-all ${
-          whitePage ? 'text-gray-600 hover:text-gray-900 border-gray-200 hover:border-gray-400 bg-white/80' : 'text-white/60 hover:text-cyan border-white/5 hover:border-cyan/30'
-        }`}
-      >
-        <FiChevronLeft size={16} />
-        <span className="hidden sm:inline">NexusCloud</span>
-      </motion.button>
+      {/* Back button rendered via Portal to document.body */}
+      <BackButton onClick={onBack} whitePage={whitePage} />
 
       {/* Header buttons */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
