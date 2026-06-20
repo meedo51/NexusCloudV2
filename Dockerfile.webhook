@@ -1,0 +1,23 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.webhook.json package.json
+RUN npm install --production
+
+# Copy webhook handler
+COPY webhook-handler.js .
+
+# Create directory for deployment script
+RUN mkdir -p /root/NexusCloudV2
+
+# Copy deployment script
+COPY deploy.sh /root/NexusCloudV2/deploy.sh
+RUN chmod +x /root/NexusCloudV2/deploy.sh
+
+# Expose port
+EXPOSE 9001
+
+# Start webhook handler
+CMD ["node", "webhook-handler.js"]

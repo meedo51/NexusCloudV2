@@ -1,0 +1,39 @@
+name: Auto-Deploy NexusCloud
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.DEPLOY_HOST }}
+        username: ${{ secrets.DEPLOY_USERNAME }}
+        key: ${{ secrets.DEPLOY_SSH_KEY }}
+        port: ${{ secrets.DEPLOY_PORT || 22 }}
+        script: |
+          cd /root/NexusCloudV2
+          echo "Pulling latest changes..."
+          git pull origin main
+          
+          echo "Rebuilding containers..."
+          docker compose down
+          docker compose build --no-cache
+          docker compose up -d
+          
+          echo "Running migrations..."
+          docker exec nexuscloud-backend npm run db:migrate
+          
+          echo "Health check..."
+          sleep 10
+          if curl -s http://localhost:5000/api/health | grep -q '"status":"ok"'; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Health check failed!"
+            exit 1
+          fi

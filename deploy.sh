@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # NexusCloud Auto-Deployment Script
-# Location: /opt/nexuscloud/deploy.sh
+# Location: /root/NexusCloudV2/deploy.sh
 
 set -e  # Exit on error
 
 # Configuration
-REPO_DIR="/opt/nexuscloud"  # Change to your actual directory
-LOG_FILE="/var/log/nexuscloud-deploy.log"
-BACKUP_DIR="/opt/nexuscloud/backups"
+REPO_DIR="/root/NexusCloudV2"  # Change to your actual directory
+LOG_FILE="/root/NexusCloudV2/deployment.log"
+BACKUP_DIR="/root/NexusCloudV2/backups"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # Colors for output
