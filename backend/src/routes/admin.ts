@@ -38,6 +38,28 @@ function ipInCidr(ip: string, cidr: string): boolean {
 }
 
 const router = Router();
+
+router.post('/seed-admin', async (_req: Request, res: Response) => {
+  try {
+    const existing = await prepare("SELECT id FROM users WHERE username = 'admin'").get();
+    if (existing) {
+      res.json({ message: 'Admin user already exists', created: false });
+      return;
+    }
+
+    const id = uuidv4();
+    const passwordHash = bcrypt.hashSync('admin123', 10);
+    await prepare(
+      'INSERT INTO users (id, username, email, passwordHash, displayName, storageQuotaBytes, isAdmin, createdAt) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())'
+    ).run(id, 'admin', 'admin@nexuscloud.app', passwordHash, 'Administrator', 10737418240, true);
+
+    res.status(201).json({ message: 'Default admin user created', created: true });
+  } catch (err: any) {
+    console.error('Seed admin error:', err);
+    res.status(500).json({ error: 'Failed to seed admin user' });
+  }
+});
+
 router.use(authenticateToken);
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
@@ -708,27 +730,6 @@ router.get('/health', async (_req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Admin health error:', err);
     res.status(500).json({ error: 'Health check failed' });
-  }
-});
-
-router.post('/seed-admin', async (_req: Request, res: Response) => {
-  try {
-    const existing = await prepare("SELECT id FROM users WHERE username = 'admin'").get();
-    if (existing) {
-      res.json({ message: 'Admin user already exists', created: false });
-      return;
-    }
-
-    const id = uuidv4();
-    const passwordHash = bcrypt.hashSync('admin123', 10);
-    await prepare(
-      'INSERT INTO users (id, username, email, passwordHash, displayName, storageQuotaBytes, isAdmin, createdAt) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())'
-    ).run(id, 'admin', 'admin@nexuscloud.app', passwordHash, 'Administrator', 10737418240, true);
-
-    res.status(201).json({ message: 'Default admin user created', created: true });
-  } catch (err: any) {
-    console.error('Seed admin error:', err);
-    res.status(500).json({ error: 'Failed to seed admin user' });
   }
 });
 
