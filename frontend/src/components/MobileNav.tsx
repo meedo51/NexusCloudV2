@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiHome, FiShare2, FiMenu, FiX, FiFolder, FiStar, FiTrash2,
   FiFileText, FiUser, FiActivity, FiUpload, FiServer, FiShield,
-  FiGrid, FiDownload, FiChevronDown, FiChevronRight,
+  FiGrid, FiDownload, FiChevronDown, FiChevronRight, FiSettings, FiUsers,
 } from 'react-icons/fi';
 import { filesApi, workspacesApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,7 +19,7 @@ export default function MobileNav() {
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
-    home: true, tools: false, folders: false,
+    home: true, tools: false, folders: false, admin: false,
   });
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -208,7 +208,6 @@ export default function MobileNav() {
                         { icon: FiServer, label: 'Workspaces', path: '/workspaces' },
                         { icon: FiServer, label: 'WebDAV', path: '/webdav' },
                         { icon: FiShield, label: '2FA Settings', path: '/2fa' },
-                        ...(isAdmin ? [{ icon: FiShield, label: 'Admin Panel', path: '/admin' }] : []),
                       ].map(item => (
                         <button key={item.path} onClick={() => navTo(item.path)}
                           className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
@@ -221,6 +220,53 @@ export default function MobileNav() {
                     </div>
                   )}
                 </div>
+
+                {/* Administration section */}
+                {isAdmin && (
+                  <div className="mb-1">
+                    <button
+                      onClick={() => setExpanded(prev => ({ ...prev, admin: !prev.admin }))}
+                      className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-medium text-white/30 uppercase tracking-wider hover:text-white/50 transition-colors w-full text-left"
+                    >
+                      Administration
+                      <span className="text-white/10">
+                        {expanded.admin ? <FiChevronDown size={10} /> : <FiChevronRight size={10} />}
+                      </span>
+                    </button>
+                    {expanded.admin && (
+                      <div className="space-y-0.5">
+                        <button onClick={() => navTo('/admin')}
+                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                            isActive('/admin') ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                          }`}>
+                          <FiShield size={16} />
+                          <span>Dashboard</span>
+                        </button>
+                        <button onClick={() => navTo('/admin?tab=users')}
+                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                            location.pathname === '/admin' && new URLSearchParams(location.search).get('tab') === 'users' ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                          }`}>
+                          <FiUsers size={16} />
+                          <span>Users</span>
+                        </button>
+                        <button onClick={() => navTo('/admin?tab=settings')}
+                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                            location.pathname === '/admin' && new URLSearchParams(location.search).get('tab') === 'settings' ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                          }`}>
+                          <FiSettings size={16} />
+                          <span>Settings</span>
+                        </button>
+                        <button onClick={() => navTo('/admin?tab=audit')}
+                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                            location.pathname === '/admin' && new URLSearchParams(location.search).get('tab') === 'audit' ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                          }`}>
+                          <FiActivity size={16} />
+                          <span>Audit Logs</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Folders section */}
                 <div className="mb-1">

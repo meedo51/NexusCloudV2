@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { FiFileText, FiCode, FiDatabase, FiImage, FiUsers } from 'react-icons/fi';
+import { FiFileText, FiCode, FiDatabase, FiImage, FiUsers, FiShield } from 'react-icons/fi';
 import { StudioAppCard } from '../components/Navigation';
+import { useAuth } from '../contexts/AuthContext';
 
 const apps = [
   {
@@ -51,6 +52,20 @@ const apps = [
 ];
 
 export default function StudioPage() {
+  const { isAdmin } = useAuth();
+
+  const adminApp = {
+    id: 'admin',
+    name: 'Admin Dashboard',
+    icon: <FiShield size={24} className="text-cyan" />,
+    description: 'System administration, user management, settings, audit logs, and server health monitoring.',
+    status: 'active',
+    color: 'from-cyan/30 to-blue-500/30',
+    path: '/admin',
+  };
+
+  const displayedApps = isAdmin ? [adminApp, ...apps] : apps;
+
   return (
     <div className="p-6">
       <motion.div
@@ -65,7 +80,7 @@ export default function StudioPage() {
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {apps.map((app, i) => (
+        {displayedApps.map((app, i) => (
           <motion.div
             key={app.id}
             initial={{ opacity: 0, y: 20 }}

@@ -19,7 +19,7 @@ function formatSize(bytes: number): string {
 }
 
 function Profile() {
-  const { user, login } = useAuth();
+  const { user, isAdmin, login } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [username, setUsername] = useState(user?.username || '');
@@ -90,7 +90,14 @@ function Profile() {
             {(displayName || username)?.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h3 className="text-lg font-semibold">{displayName || username}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{displayName || username}</h3>
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan/20 text-cyan text-[10px] font-medium">
+                  <FiShield size={9} /> Admin
+                </span>
+              )}
+            </div>
             <p className="text-sm text-white/40">{email}</p>
           </div>
         </div>

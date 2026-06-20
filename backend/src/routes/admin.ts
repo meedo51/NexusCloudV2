@@ -4,9 +4,38 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import net from 'net';
 import { prepare, logActivity } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { User, UserPublic, FileEntry, ActivityLogEntry } from '../types';
+
+const ADMIN_IP_WHITELIST = (process.env.ADMIN_IP_WHITELIST || '').split(',').map(s => s.trim()).filter(Boolean);
+const ADMIN_REQUIRE_MFA = process.env.ADMIN_REQUIRE_MFA === 'true';
+
+function ipToLong(ip: string): number {
+  const parts = ip.split('.');
+  return ((+parts[0] << 24) + (+parts[1] << 16) + (+parts[2] << 8) + (+parts[3])) >>> 0;
+}
+
+function cidrToRange(cidr: string): { start: number; end: number } | null {
+  const [ip, bitsStr] = cidr.split('/');
+  const bits = parseInt(bitsStr, 10);
+  if (!ip || isNaN(bits)) return null;
+  if (bits < 0 || bits > 32) return null;
+  const ipLong = ipToLong(ip);
+  const mask = ~(2 ** (32 - bits) - 1) >>> 0;
+  const start = (ipLong & mask) >>> 0;
+  const end = (start + 2 ** (32 - bits) - 1) >>> 0;
+  return { start, end };
+}
+
+function ipInCidr(ip: string, cidr: string): boolean {
+  if (!net.isIPv4(ip)) return false;
+  const range = cidrToRange(cidr);
+  if (!range) return false;
+  const ipLong = ipToLong(ip);
+  return ipLong >= range.start && ipLong <= range.end;
+}
 
 const router = Router();
 router.use(authenticateToken);
@@ -21,7 +50,39 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   next();
 }
 
+function ipWhitelist(req: Request, res: Response, next: NextFunction): void {
+  if (ADMIN_IP_WHITELIST.length === 0) return next();
+  const clientIp = req.ip || req.socket.remoteAddress || '';
+  const ipv4 = clientIp.startsWith('::ffff:') ? clientIp.slice(7) : clientIp;
+  const allowed = ADMIN_IP_WHITELIST.some(cidr => ipInCidr(ipv4, cidr));
+  if (!allowed) {
+    console.warn(`[ADMIN] Blocked access from non-whitelisted IP: ${ipv4}`);
+    res.status(403).json({ error: 'Access from this IP is not allowed' });
+    return;
+  }
+  next();
+}
+
+async function requireMFA(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (!ADMIN_REQUIRE_MFA) return next();
+  try {
+    const user = await prepare('SELECT two_factor_enabled FROM users WHERE id = $1').get(req.user!.userId) as any;
+    if (!user?.two_factor_enabled) {
+      res.status(403).json({
+        error: 'Two-factor authentication must be enabled to access admin panel',
+        require2FA: true,
+      });
+      return;
+    }
+    next();
+  } catch {
+    next();
+  }
+}
+
+router.use(ipWhitelist);
 router.use(requireAdmin);
+router.use(requireMFA);
 
 function toPublic(u: User): UserPublic {
   return {
@@ -160,7 +221,7 @@ router.post('/users', async (req: Request, res: Response) => {
 
 router.put('/users/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { username, email, password, displayName, storageQuotaBytes, isAdmin } = req.body;
 
     const existing = await prepare('SELECT * FROM users WHERE id = $1').get(id) as User | undefined;
@@ -203,19 +264,19 @@ router.put('/users/:id', async (req: Request, res: Response) => {
       itemId: id,
       itemName: user.username,
       ipAddress: String(req.ip || ''),
-      userAgent: String(req.headers['user-agent'] || ''),
+      userAgent: String(req.headers['user-agent'] ?? ''),
     });
 
     res.json(toPublic(user));
   } catch (err: any) {
-    console.error('Admin update user error:', err);
-    res.status(500).json({ error: 'Failed to update user' });
+    console.error('Admin create user error:', err);
+    res.status(500).json({ error: 'Failed to create user' });
   }
 });
 
-router.delete('/users/:id', async (req: Request, res: Response) => {
+router.put('/users/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const user = await prepare('SELECT * FROM users WHERE id = $1').get(id) as User | undefined;
     if (!user) {
@@ -303,7 +364,7 @@ router.get('/files', async (req: Request, res: Response) => {
 
 router.delete('/files/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const file = await prepare('SELECT * FROM files WHERE id = $1').get(id) as FileEntry | undefined;
     if (!file) {
@@ -335,7 +396,7 @@ router.delete('/files/:id', async (req: Request, res: Response) => {
 
 router.put('/files/:id/transfer', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { userId: newUserId } = req.body;
 
     if (!newUserId) {
@@ -419,7 +480,7 @@ router.get('/documents', async (req: Request, res: Response) => {
 
 router.delete('/documents/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const doc = await prepare('SELECT * FROM documents WHERE id = $1').get(id) as any;
     if (!doc) {
