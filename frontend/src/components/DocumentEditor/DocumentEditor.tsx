@@ -5,7 +5,6 @@ import Highlight from '@tiptap/extension-highlight';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
 import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
@@ -31,8 +30,11 @@ import ExportDialog from './ExportDialog';
 import DocumentSidebar from './DocumentSidebar';
 import FindReplaceDialog from './FindReplaceDialog';
 import ImageInsertModal from './ImageInsertModal';
+import ImageToolbar from './ImageToolbar';
+import TableProperties from './TableProperties';
 import { FindReplaceExtension } from '../../extensions/FindReplaceExtension';
 import { FontSizeExtension } from '../../extensions/FontSizeExtension';
+import { ExtendedImage } from '../../extensions/ExtendedImage';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import type { NexusDocument } from '../../types';
 
@@ -58,7 +60,7 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
       }),
       Underline,
       Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-cyan underline' } }),
-      Image.configure({ inline: true, allowBase64: true }),
+      ExtendedImage.configure({ inline: false, allowBase64: true }),
       Table.configure({ resizable: true }),
       TableRow,
       TableCell,
@@ -282,6 +284,22 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
             }`}>
               <BubbleMenu editor={editor} tippyOptions={{ duration: 150 }}>
                 <FloatingToolbar editor={editor} />
+              </BubbleMenu>
+              <BubbleMenu
+                editor={editor}
+                pluginKey="imageMenu"
+                tippyOptions={{ duration: 150, placement: 'top' }}
+                shouldShow={({ editor }) => editor.isActive('image')}
+              >
+                <ImageToolbar editor={editor} />
+              </BubbleMenu>
+              <BubbleMenu
+                editor={editor}
+                pluginKey="tableMenu"
+                tippyOptions={{ duration: 150, placement: 'top' }}
+                shouldShow={({ editor }) => editor.isActive('table')}
+              >
+                <TableProperties editor={editor} />
               </BubbleMenu>
               <div className="p-4">
                 <EditorContent editor={editor} />
