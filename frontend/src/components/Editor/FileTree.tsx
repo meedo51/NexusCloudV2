@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiFile, FiFolder, FiChevronRight, FiChevronDown } from 'react-icons/fi';
+import { FiChevronRight, FiChevronDown } from 'react-icons/fi';
 import { FileItem } from '../../types';
 import { filesApi } from '../../services/api';
+import FileIcon from '../Icons/FileIcon';
+import FolderIcon from '../Icons/FolderIcon';
 
 interface FileTreeProps {
   currentFileId: string;
@@ -48,7 +50,7 @@ export default function FileTree({ currentFileId, folderId }: FileTreeProps) {
       <button onClick={() => setCollapsed(!collapsed)}
         className="flex items-center gap-1 px-2 py-1 text-[11px] text-white/40 hover:text-white/70 transition-colors w-full text-left">
         {collapsed ? <FiChevronRight size={10} /> : <FiChevronDown size={10} />}
-        <FiFolder size={12} />
+        <FolderIcon size="xs" color="code" />
         <span className="font-medium ml-1">Files</span>
         <span className="text-white/20 ml-auto">{files.length}</span>
       </button>
@@ -56,7 +58,7 @@ export default function FileTree({ currentFileId, folderId }: FileTreeProps) {
         <div className="ml-1">
           {folders.map(f => (
             <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 text-xs text-white/30 rounded-lg">
-              <FiFolder size={12} className="text-cyan/40" />
+              <FolderIcon size="xs" color="default" />
               <span className="truncate">{f.originalName}</span>
             </div>
           ))}
@@ -70,7 +72,7 @@ export default function FileTree({ currentFileId, folderId }: FileTreeProps) {
                 className={`flex items-center gap-1.5 w-full px-2 py-1 rounded-lg text-xs transition-colors ${
                   active ? 'bg-cyan/10 text-cyan' : editable ? 'text-white/40 hover:text-white/70 hover:bg-white/5' : 'text-white/20 cursor-default'
                 }`}>
-                <FiFile size={11} className="flex-shrink-0" />
+                <FileIcon filename={f.originalName} mime={f.mimeType} size="xs" />
                 <span className="truncate">{f.originalName}</span>
               </button>
             );

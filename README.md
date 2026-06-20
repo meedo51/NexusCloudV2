@@ -1,6 +1,6 @@
 # NexusCloud ☁️
 
-> **Ultimate Cloud Files Management Platform** — Self-hosted, feature-rich file sharing with team workspaces, 2FA, WebDAV, version history, and full-text search.
+> **Ultimate Cloud Files & Documents Platform** — Self-hosted, feature-rich file sharing with a rich text document editor (NexusDocs), team workspaces, 2FA, WebDAV, version history, and full-text search.
 
 [![Status](https://img.shields.io/badge/Status-Active-00F0FF?style=flat-square)](https://github.com/yourusername/nexuscloud)
 [![License](https://img.shields.io/badge/License-MIT-FF6B6B?style=flat-square)](LICENSE)
@@ -9,6 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
 [![Express](https://img.shields.io/badge/Express-4-000000?style=flat-square&logo=express)](https://expressjs.com/)
+[![TipTap](https://img.shields.io/badge/Editor-TipTap-FF6B6B?style=flat-square&logo=prosemirror)](https://tiptap.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
 
 ---
@@ -39,20 +40,21 @@
 
 ## 🚀 Project Overview
 
-NexusCloud is a **self-hosted, full-featured cloud file management platform** designed for individuals and teams who want complete control over their data. With a modern glassmorphism UI, it provides Dropbox/Google Drive-like functionality without third-party dependency.
+NexusCloud is a **self-hosted, full-featured cloud files & documents platform** designed for individuals and teams who want complete control over their data. With a modern glassmorphism UI, it combines Dropbox/Google Drive-like file management with a powerful rich text document editor (NexusDocs) — all without third-party dependency.
 
 **Value Proposition:**
 - 🔒 **Privacy-first** — Your files, your server, your rules
+- 📝 **NexusDocs** — Built-in rich text editor with TipTap/ProseMirror
 - 📦 **All-in-one** — Sharing, versioning, search, workspaces, 2FA, WebDAV
 - 🐳 **Easy deploy** — Single `docker-compose up -d` to get started
-- 🎨 **Modern UX** — Drag-and-drop, responsive design, smooth animations
+- 🎨 **Modern UX** — Drag-and-drop, responsive design, smooth animations, glassmorphism
 - 🔧 **Extensible** — PostgreSQL primary with SQLite dev option, S3-compatible storage ready
 
 ---
 
 ## ✨ Complete Feature List
 
-### ✅ Currently Implemented
+### ✅ File Management
 
 | Feature | Description |
 |---------|-------------|
@@ -61,36 +63,63 @@ NexusCloud is a **self-hosted, full-featured cloud file management platform** de
 | **File Upload** | Drag-and-drop with progress bars, multi-file + folder support |
 | **Rename Files & Folders** | Inline rename with context menu or double-click |
 | **Share with Expiration & Password** | Expiring shareable links (default 7 days) with optional password protection |
-| **Context Menus** | Right-click menus for folder, file, and screen areas |
 | **File Preview** | Inline preview for images, PDFs, text files |
 | **Download Files** | Single file download with direct links |
 | **Compress Selected Files** | Batch compress to ZIP archive |
 | **Batch Select with Actions** | Multi-select for compress, delete, move operations |
 | **Profile Preview & Management** | Update display name, email, password, preferences |
-
-### ✅ Tier 1 Features
-
-| Feature | Description |
-|---------|-------------|
 | **Soft Delete with Trash** | Deleted files move to trash; 30-day auto-purge configurable |
 | **Storage Quota per User** | Configurable per-user storage limits with live usage tracking |
 | **Breadcrumb Navigation** | Clickable path traversal with folder hierarchy |
 | **Search with Filters** | Filter by name, file type (image/document/video/audio), date range |
 | **Favorites / Starred Items** | Star files for quick access in dedicated sidebar section |
 | **Drag-and-Drop Upload** | Multi-file + folder upload with visual drop zone |
-
-### ✅ Tier 2 Features
-
-| Feature | Description |
-|---------|-------------|
 | **Version History** | Last 5 versions retained per file with restore capability |
 | **Activity Log** | Full audit trail with pagination and filterable history |
 | **Public File Requests** | Upload links for external users (no login required) |
 | **Image & Video Thumbnails** | Auto-generated thumbnails via Sharp (saved as WebP) |
 | **Bulk Folder Upload** | Preserves folder hierarchy on upload |
 | **Grid / List View Toggle** | Toggle with user preference saved to profile |
+| **Context Menu System** | Portal-based right-click menus with keyboard navigation, submenus, framer-motion animations, and auto-positioning |
+| **File Icon Auto-Detection** | 150+ file extensions mapped to 13 category SVG icons with color coding; folder icons with 5 states (default, open, shared, starred, trash) |
 
-### 🚀 Tier 3 Features (Ready for Enablement)
+### ✅ NexusDocs — Rich Text Documents
+
+| Feature | Description |
+|---------|-------------|
+| **WYSIWYG Editor** | TipTap/ProseMirror-based rich text editing with bold, italic, headings, bullet lists, ordered lists, blockquotes, code blocks |
+| **Image Insertion** | Upload from device, paste URL, or browse cloud storage with folder navigation |
+| **Image Toolbar** | Bubble menu for image alignment (left/center/right) and resize presets (S/M/L/XL) |
+| **Table Properties** | Bubble menu for insert/delete row/column, merge/split cells, toggle header, delete table |
+| **Document Persistence** | Auto-save on Ctrl+S with content restoration across sessions |
+| **Download Formats** | Export as HTML, Markdown (via turndown), or Plain Text |
+| **Export to Cloud** | Save documents as HTML files in cloud storage |
+| **Context Menu** | Right-click on documents for Open, Rename, Duplicate, Download, Export to Cloud, Details, Delete |
+| **Rename Modal** | Inline rename with auto-select and Enter-to-submit |
+| **Delete Confirmation** | Modal with loading state to prevent accidental deletion |
+| **Details Panel** | Slide-in side panel with document metadata (word count, timestamps) |
+| **Document Listing** | NexusDocs page with gradient branding, document cards, and new document creation |
+| **Rich Document Schema** | Supports images, tables, code blocks, blockquotes, text alignment, and more |
+
+### ✅ Code / File Editor
+
+| Feature | Description |
+|---------|-------------|
+| **Syntax Highlighting** | Code editor for source files with language-aware highlighting |
+| **File Editing** | Open and edit text-based files directly in the browser |
+| **Save Changes** | Persist file edits back to cloud storage |
+
+### ✅ File Icon System
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-Detection** | Detects file type from extension, MIME type, or special filename (Dockerfile, .gitignore, env) |
+| **150+ Extension Map** | Comprehensive mapping covering code, document, image, video, audio, archive, config, database, font, certificate, and executable categories |
+| **13 Category SVGs** | Hand-crafted SVG icons per category: code `<>`, document lines, image landscape, audio note, archive zipped box, video, database, config gear, certificate, font, executable, disc, report |
+| **Folder Icons** | 5 states (default/open/shared/starred/trash), 10 color themes, optional count badge |
+| **Animations** | Hover scale+glow, skeleton shimmer, pop-in, pulse loading states |
+
+### 🚀 Advanced Features (Ready for Enablement)
 
 | Feature | Description |
 |---------|-------------|
@@ -107,6 +136,8 @@ NexusCloud is a **self-hosted, full-featured cloud file management platform** de
 | Layer | Technology |
 |-------|-----------|
 | **Frontend** | React 18 + TypeScript + Vite + TailwindCSS 3 + Framer Motion |
+| **Rich Text Editor** | TipTap 2.x · ProseMirror · @tiptap/react (BubbleMenu, extensions: Image, Table, CodeBlock, TextStyle, TextAlign) |
+| **File Icons** | Custom SVG icon system — 13 category icons, 150+ extension map, auto-detection by MIME/extension/filename |
 | **Backend** | Node.js + Express 4 + TypeScript |
 | **Database** | PostgreSQL 16 (primary) · SQLite via better-sqlite3 (dev) |
 | **Container** | Docker & Docker Compose (Alpine-based images) |
@@ -115,6 +146,7 @@ NexusCloud is a **self-hosted, full-featured cloud file management platform** de
 | **Auth** | JWT (jsonwebtoken) + bcryptjs + speakeasy (TOTP) |
 | **Image Processing** | Sharp (thumbnails, WebP conversion) |
 | **Search** | Full-text search via PostgreSQL `tsvector` + file content extraction (pdf-parse, mammoth) |
+| **Document Export** | Turndown (HTML → Markdown) |
 
 ---
 

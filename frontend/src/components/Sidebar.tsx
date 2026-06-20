@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  FiFolder, FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX, FiUser,
+  FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX, FiUser,
   FiTrash2, FiStar, FiActivity, FiUpload, FiShield, FiServer, FiFileText,
+  FiGrid, FiDownload, FiFolder,
 } from 'react-icons/fi';
 import { filesApi, workspacesApi } from '../services/api';
 import { FileItem, FavoriteEntry, Workspace } from '../types';
 import toast from 'react-hot-toast';
+import FolderIcon from './Icons/FolderIcon';
 
 interface SidebarProps {
   onClose: () => void;
@@ -19,7 +21,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const [folders, setFolders] = useState<FileItem[]>([]);
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({
+    home: true, tools: false, folders: false,
+  });
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 
@@ -47,112 +51,163 @@ export default function Sidebar({ onClose }: SidebarProps) {
     } catch { toast.error('Failed to create folder'); }
   };
 
-  const navItems = [
-    { icon: FiHome, label: 'My Files', path: '/', active: location.pathname === '/' },
-    { icon: FiStar, label: 'Favorites', path: '/favorites', active: location.pathname === '/favorites' },
-    { icon: FiTrash2, label: 'Trash', path: '/trash', active: location.pathname === '/trash' },
-    { icon: FiShare2, label: 'Shared Links', path: '/shares', active: location.pathname === '/shares' },
-    { icon: FiFileText, label: 'Documents', path: '/documents', active: location.pathname === '/documents' },
-    { icon: FiUser, label: 'Profile', path: '/profile', active: location.pathname === '/profile' },
-  ];
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <aside className="h-full glass-strong border-r border-white/5 flex flex-col">
-      <div className="p-4 flex items-center justify-between border-b border-white/5">
-        <h2 className="font-semibold text-white/80">Navigation</h2>
+      <div className="p-4 flex items-center gap-2 border-b border-white/5">
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan to-blue-500 flex items-center justify-center text-[10px] font-bold shrink-0">
+          N
+        </div>
+        <span className="font-semibold text-sm bg-gradient-to-r from-cyan to-blue-400 bg-clip-text text-transparent flex-1">
+          NexusCloud
+        </span>
         <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40">
           <FiX size={16} />
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-        {navItems.map((item) => (
-          <button key={item.path} onClick={() => navigate(item.path)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-              item.active ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
-            }`}>
-            <item.icon size={18} />
-            <span>{item.label}</span>
-          </button>
-        ))}
-
-        <div className="pt-4 pb-2">
-          <span className="text-xs font-medium text-white/30 uppercase tracking-wider px-3">Tools</span>
+      <nav className="flex-1 overflow-y-auto p-3 space-y-0.5 custom-scrollbar">
+        {/* Home Section */}
+        <div className="mb-1">
+          <div className="flex items-center justify-between px-3 py-2 group">
+            <button
+              onClick={() => setExpanded(prev => ({ ...prev, home: !prev.home }))}
+              className="flex items-center gap-1.5 text-[10px] font-medium text-white/30 uppercase tracking-wider hover:text-white/50 transition-colors"
+            >
+              <span>Home</span>
+              <span className="text-white/10 group-hover:text-white/20 transition-colors">
+                {expanded.home ? <FiChevronDown size={10} /> : <FiChevronRight size={10} />}
+              </span>
+            </button>
+          </div>
+          {expanded.home && (
+            <div className="space-y-0.5">
+              <button onClick={() => navigate('/')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                  isActive('/') || location.pathname.startsWith('/folder/') ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}>
+                <FiHome size={16} />
+                <span>My Space</span>
+              </button>
+              <button onClick={() => navigate('/favorites')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                  isActive('/favorites') ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}>
+                <FiStar size={16} />
+                <span>Favorites</span>
+              </button>
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm opacity-40 cursor-not-allowed text-white/50" title="Coming soon">
+                <FiDownload size={16} className="text-white/30" />
+                <span className="flex-1">Downloads</span>
+                <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-white/5 text-white/20">Soon</span>
+              </div>
+              <button onClick={() => navigate('/studio')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                  isActive('/studio') ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}>
+                <FiGrid size={16} />
+                <span>Studio</span>
+              </button>
+              <button onClick={() => navigate('/trash')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                  isActive('/trash') ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}>
+                <FiTrash2 size={16} />
+                <span>Trash</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        <button onClick={() => navigate('/activity')}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-            location.pathname === '/activity' ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
-          }`}>
-          <FiActivity size={16} />
-          <span>Activity Log</span>
-        </button>
-
-        <button onClick={() => navigate('/upload-requests')}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-            location.pathname === '/upload-requests' ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
-          }`}>
-          <FiUpload size={16} />
-          <span>Upload Requests</span>
-        </button>
-
-        <button onClick={() => navigate('/workspaces')}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-            location.pathname.startsWith('/workspaces') ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
-          }`}>
-          <FiServer size={16} />
-          <span>Workspaces</span>
-        </button>
-
-        <button onClick={() => navigate('/webdav')}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-            location.pathname === '/webdav' ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
-          }`}>
-          <FiServer size={16} />
-          <span>WebDAV</span>
-        </button>
-
-        <button onClick={() => navigate('/2fa')}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-            location.pathname === '/2fa' ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
-          }`}>
-          <FiShield size={16} />
-          <span>2FA Settings</span>
-        </button>
-
-        <div className="pt-4 pb-2 flex items-center justify-between">
-          <span className="text-xs font-medium text-white/30 uppercase tracking-wider px-3">Folders</span>
-          <button onClick={() => setShowNewFolder(!showNewFolder)} className="p-1 rounded-lg hover:bg-white/5 text-cyan">
-            <FiPlus size={14} />
-          </button>
+        {/* Tools Section */}
+        <div className="mb-1">
+          <div className="flex items-center justify-between px-3 py-2 group">
+            <button
+              onClick={() => setExpanded(prev => ({ ...prev, tools: !prev.tools }))}
+              className="flex items-center gap-1.5 text-[10px] font-medium text-white/30 uppercase tracking-wider hover:text-white/50 transition-colors"
+            >
+              <span>Tools</span>
+              <span className="text-white/10 group-hover:text-white/20 transition-colors">
+                {expanded.tools ? <FiChevronDown size={10} /> : <FiChevronRight size={10} />}
+              </span>
+            </button>
+          </div>
+          {expanded.tools && (
+            <div className="space-y-0.5">
+              <button onClick={() => navigate('/shares')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                  isActive('/shares') ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}>
+                <FiShare2 size={16} />
+                <span>Shared Links</span>
+              </button>
+              {[
+                { icon: FiActivity, label: 'Activity Log', path: '/activity' },
+                { icon: FiUpload, label: 'Upload Requests', path: '/upload-requests' },
+                { icon: FiServer, label: 'Workspaces', path: '/workspaces', startsWith: true },
+                { icon: FiServer, label: 'WebDAV', path: '/webdav' },
+                { icon: FiShield, label: '2FA Settings', path: '/2fa' },
+              ].map(item => (
+                <button key={item.path} onClick={() => navigate(item.path)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                    (item.startsWith ? location.pathname.startsWith(item.path) : isActive(item.path)) ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
+                  }`}>
+                  <item.icon size={16} />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {showNewFolder && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="px-3 pb-2">
-            <input autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && createFolder()} placeholder="Folder name..."
-              className="w-full px-3 py-2 rounded-xl glass text-sm text-white placeholder-white/30 outline-none focus:border-cyan/30 transition-colors" />
-          </motion.div>
-        )}
+        {/* Folders Section */}
+        <div className="mb-1">
+          <div className="flex items-center justify-between px-3 py-2 group">
+            <button
+              onClick={() => setExpanded(prev => ({ ...prev, folders: !prev.folders }))}
+              className="flex items-center gap-1.5 text-[10px] font-medium text-white/30 uppercase tracking-wider hover:text-white/50 transition-colors"
+            >
+              <FiFolder size={10} className="opacity-50" />
+              <span>Folders</span>
+              <span className="text-white/10 group-hover:text-white/20 transition-colors">
+                {expanded.folders ? <FiChevronDown size={10} /> : <FiChevronRight size={10} />}
+              </span>
+            </button>
+            <button onClick={() => setShowNewFolder(!showNewFolder)} className="p-1 rounded-lg hover:bg-white/5 text-cyan">
+              <FiPlus size={14} />
+            </button>
+          </div>
+          {expanded.folders && (
+            <div className="space-y-0.5">
+              {showNewFolder && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="px-3 pb-2">
+                  <input autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && createFolder()} placeholder="Folder name..."
+                    className="w-full px-3 py-2 rounded-xl glass text-sm text-white placeholder-white/30 outline-none focus:border-cyan/30 transition-colors" />
+                </motion.div>
+              )}
+              {folders.map((folder) => (
+                <button key={folder.id} onClick={() => navigate(`/folder/${folder.id}`)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${
+                    currentFolderId === folder.id ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
+                  }`}>
+                  <FolderIcon size="sm" color="default" />
+                  <span className="truncate">{folder.name}</span>
+                </button>
+              ))}
+              {folders.length === 0 && !showNewFolder && (
+                <p className="text-xs text-white/20 px-3 py-2">No folders yet</p>
+              )}
+            </div>
+          )}
+        </div>
 
-        {folders.map((folder) => (
-          <button key={folder.id} onClick={() => navigate(`/folder/${folder.id}`)}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${
-              currentFolderId === folder.id ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
-            }`}>
-            <FiFolder size={16} className="text-cyan/60" />
-            <span className="truncate">{folder.name}</span>
-          </button>
-        ))}
-
-        {folders.length === 0 && !showNewFolder && (
-          <p className="text-xs text-white/20 px-3 py-2">No folders yet</p>
-        )}
-
+        {/* Workspaces */}
         {workspaces.length > 0 && (
-          <>
-            <div className="pt-4 pb-2">
-              <span className="text-xs font-medium text-white/30 uppercase tracking-wider px-3">Workspaces</span>
+          <div className="pt-1">
+            <div className="px-3 py-2">
+              <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Workspaces</span>
             </div>
             {workspaces.map(ws => (
               <button key={ws.id} onClick={() => navigate(`/workspaces/${ws.id}`)}
@@ -161,13 +216,14 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 <span className="truncate">{ws.name}</span>
               </button>
             ))}
-          </>
+          </div>
         )}
 
+        {/* Favorites inline */}
         {favorites.length > 0 && (
-          <>
-            <div className="pt-4 pb-2">
-              <span className="text-xs font-medium text-white/30 uppercase tracking-wider px-3">Favorites</span>
+          <div className="pt-1">
+            <div className="px-3 py-2">
+              <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Favorites</span>
             </div>
             {favorites.map(fav => fav.item && (
               <button key={fav.id}
@@ -177,7 +233,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 <span className="truncate">{fav.item.originalName}</span>
               </button>
             ))}
-          </>
+          </div>
         )}
       </nav>
 
@@ -189,4 +245,3 @@ export default function Sidebar({ onClose }: SidebarProps) {
     </aside>
   );
 }
-

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiFile, FiFolder, FiChevronRight, FiImage, FiFileText, FiX } from 'react-icons/fi';
+import { FiSearch, FiChevronRight } from 'react-icons/fi';
 import { filesApi } from '../services/api';
 import { FileItem } from '../types';
 import toast from 'react-hot-toast';
+import FileIcon from '../components/Icons/FileIcon';
+import FolderIcon from '../components/Icons/FolderIcon';
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -12,13 +14,6 @@ function formatSize(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-function getIcon(mimeType: string | undefined) {
-  if (mimeType === 'application/folder') return FiFolder;
-  if (mimeType?.startsWith('image/')) return FiImage;
-  if (mimeType?.startsWith('text/') || mimeType === 'application/pdf') return FiFileText;
-  return FiFile;
 }
 
 function highlightText(text: string, query: string): React.ReactNode {
@@ -122,7 +117,6 @@ export default function SearchResults() {
         <div className="glass rounded-2xl overflow-hidden divide-y divide-white/5">
           <AnimatePresence>
             {results.map((file, i) => {
-              const Icon = getIcon(file.mimeType);
               return (
                 <motion.div
                   key={file.id}
@@ -132,10 +126,12 @@ export default function SearchResults() {
                   className="flex items-center gap-4 px-4 py-3 hover:bg-white/5 transition-colors group cursor-pointer"
                   onClick={() => handleClick(file)}
                 >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    file.isFolder ? 'bg-cyan/10 text-cyan' : 'bg-white/5 text-white/60'
-                  }`}>
-                    <Icon size={20} />
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    {file.isFolder ? (
+                      <FolderIcon size="md" color="default" />
+                    ) : (
+                      <FileIcon filename={file.originalName} mime={file.mimeType} size="md" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">

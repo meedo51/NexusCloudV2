@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiLink, FiUpload, FiCloud, FiSearch, FiX, FiImage as FiImageIcon } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import CloudImageBrowser from './CloudImageBrowser';
 
 interface ImageInsertModalProps {
   isOpen: boolean;
@@ -244,11 +245,7 @@ export default function ImageInsertModal({ isOpen, onClose, onInsert }: ImageIns
 
             {activeTab === 'cloud' && (
               <motion.div key="cloud" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                <div className="rounded-xl bg-white/5 p-8 text-center">
-                  <FiCloud size={40} className="mx-auto mb-3 text-white/20" />
-                  <p className="text-white/50 text-sm">Connect cloud storage to browse your images</p>
-                  <p className="text-white/20 text-xs mt-2">Coming soon</p>
-                </div>
+                <CloudImageBrowser onInsert={onInsert} />
               </motion.div>
             )}
 

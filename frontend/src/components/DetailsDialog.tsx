@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FiX, FiFile, FiFolder, FiCalendar, FiClock, FiHardDrive,
+  FiX, FiCalendar, FiClock, FiHardDrive,
   FiType, FiTag, FiHash, FiLayers, FiHome,
 } from 'react-icons/fi';
 import { filesApi } from '../services/api';
 import { FileItem } from '../types';
+import FileIcon from './Icons/FileIcon';
+import FolderIcon from './Icons/FolderIcon';
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -88,10 +90,8 @@ export default function DetailsDialog({ fileId, onClose, rootMode }: DetailsDial
           ) : file ? (
             <div className="space-y-1.5">
               <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${
-                  file.isFolder ? 'bg-cyan/10 text-cyan' : 'bg-coral/10 text-coral'
-                }`}>
-                  {file.isFolder ? <FiFolder size={22} /> : <FiFile size={22} />}
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
+                  {file.isFolder ? <FolderIcon size="lg" color="default" /> : <FileIcon filename={file.originalName || file.name} mime={file.mimeType} size="lg" />}
                 </div>
                 <div className="min-w-0">
                   <p className="font-medium truncate">{file.originalName || file.name}</p>

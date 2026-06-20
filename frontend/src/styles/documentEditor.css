@@ -293,6 +293,57 @@
 
 .tippy-box[data-theme~='nexus'] .tippy-arrow { color: var(--editor-dropdown-bg); }
 
+/* Image alignment */
+.document-editor .ProseMirror img[data-alignment="left"] {
+  float: left;
+  margin: 0.5em 1em 0.5em 0;
+}
+
+.document-editor .ProseMirror img[data-alignment="right"] {
+  float: right;
+  margin: 0.5em 0 0.5em 1em;
+}
+
+.document-editor .ProseMirror img[data-alignment="center"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Image selection */
+.document-editor .ProseMirror img.ProseMirror-selectednode {
+  outline: 3px solid var(--editor-active);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Image toolbar (BubbleMenu) */
+.tippy-box[data-theme~='nexus-image'] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.tippy-box[data-theme~='nexus-image'] .tippy-content {
+  padding: 0 !important;
+}
+
+/* Table properties (BubbleMenu) */
+.tippy-box[data-theme~='nexus-table'] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.tippy-box[data-theme~='nexus-table'] .tippy-content {
+  padding: 0 !important;
+}
+
+/* Cloud image browser grid hover */
+.cloud-image-grid-item:hover .cloud-image-overlay {
+  opacity: 1;
+}
+
 /* Find/Replace decorations */
 .find-replace-match {
   background: rgba(0, 240, 255, 0.15);
