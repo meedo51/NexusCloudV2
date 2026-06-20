@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiFolder, FiChevronRight } from 'react-icons/fi';
+import { FiX, FiChevronRight } from 'react-icons/fi';
 import { filesApi } from '../services/api';
 import toast from 'react-hot-toast';
+import FolderIcon from './Icons/FolderIcon';
 
 interface FolderNode {
   id: string;
@@ -71,7 +72,7 @@ export default function MoveDialog({ fileId, fileName, currentFolderId, onClose,
             }`}
             style={{ paddingLeft: `${12 + depth * 16}px` }}
           >
-            <FiFolder size={14} className="text-cyan/60 flex-shrink-0" />
+            <FolderIcon size="sm" color="default" />
             <span className="truncate">{folder.name}</span>
             {children.length > 0 && <FiChevronRight size={12} className="ml-auto text-white/20" />}
           </button>
@@ -117,7 +118,7 @@ export default function MoveDialog({ fileId, fileName, currentFolderId, onClose,
                   : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
-              <FiFolder size={14} className="text-white/40" />
+              <FolderIcon size="sm" color="default" />
               <span>Root (no folder)</span>
             </button>
             {loading ? (

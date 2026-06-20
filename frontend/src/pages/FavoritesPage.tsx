@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiStar, FiFile, FiFolder, FiImage, FiFileText, FiTrash2 } from 'react-icons/fi';
+import { FiStar, FiTrash2 } from 'react-icons/fi';
 import { filesApi } from '../services/api';
 import { FavoriteEntry } from '../types';
 import toast from 'react-hot-toast';
+import FileIcon from '../components/Icons/FileIcon';
+import FolderIcon from '../components/Icons/FolderIcon';
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -12,13 +14,6 @@ function formatSize(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-function getIcon(mimeType: string | undefined) {
-  if (mimeType === 'application/folder') return FiFolder;
-  if (mimeType?.startsWith('image/')) return FiImage;
-  if (mimeType?.startsWith('text/') || mimeType === 'application/pdf') return FiFileText;
-  return FiFile;
 }
 
 export default function FavoritesPage() {
@@ -88,7 +83,6 @@ export default function FavoritesPage() {
           <AnimatePresence>
             {favorites.map((fav, i) => {
               if (!fav.item) return null;
-              const Icon = getIcon(fav.item.mimeType);
               return (
                 <motion.div
                   key={fav.id}
@@ -98,10 +92,12 @@ export default function FavoritesPage() {
                   className="flex items-center gap-4 px-4 py-3 hover:bg-white/5 transition-colors group cursor-pointer"
                   onClick={() => handleClick(fav)}
                 >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    fav.item.isFolder ? 'bg-cyan/10 text-cyan' : 'bg-white/5 text-white/60'
-                  }`}>
-                    <Icon size={20} />
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    {fav.item.isFolder ? (
+                      <FolderIcon size="md" color="starred" />
+                    ) : (
+                      <FileIcon filename={fav.item.originalName} mime={fav.item.mimeType} size="md" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{fav.item.originalName}</p>

@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  FiFolder, FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX, FiUser,
+  FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX, FiUser,
   FiTrash2, FiStar, FiActivity, FiUpload, FiShield, FiServer, FiFileText,
 } from 'react-icons/fi';
 import { filesApi, workspacesApi } from '../services/api';
 import { FileItem, FavoriteEntry, Workspace } from '../types';
 import toast from 'react-hot-toast';
+import FolderIcon from './Icons/FolderIcon';
 
 interface SidebarProps {
   onClose: () => void;
@@ -140,7 +141,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${
               currentFolderId === folder.id ? 'glass text-cyan' : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}>
-            <FiFolder size={16} className="text-cyan/60" />
+            <FolderIcon size="sm" color="default" />
             <span className="truncate">{folder.name}</span>
           </button>
         ))}

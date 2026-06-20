@@ -1,0 +1,192 @@
+import type { FileCategory } from './fileTypeDetection';
+
+export interface FileIconConfig {
+  category: FileCategory;
+  color: string;
+  label: string;
+  iconChar?: string;
+}
+
+export const FILE_ICON_MAP: Record<string, FileIconConfig> = {
+  // ── Code Files ──
+  js:   { category: 'code', color: '#F7DF1E', label: 'JavaScript', iconChar: 'JS' },
+  mjs:  { category: 'code', color: '#F7DF1E', label: 'JavaScript', iconChar: 'JS' },
+  cjs:  { category: 'code', color: '#F7DF1E', label: 'JavaScript', iconChar: 'JS' },
+  jsx:  { category: 'code', color: '#61DAFB', label: 'React', iconChar: '⚛' },
+  ts:   { category: 'code', color: '#3178C6', label: 'TypeScript', iconChar: 'TS' },
+  mts:  { category: 'code', color: '#3178C6', label: 'TypeScript', iconChar: 'TS' },
+  cts:  { category: 'code', color: '#3178C6', label: 'TypeScript', iconChar: 'TS' },
+  tsx:  { category: 'code', color: '#3178C6', label: 'React TS', iconChar: '⚛' },
+  html: { category: 'code', color: '#E44D26', label: 'HTML', iconChar: 'H5' },
+  htm:  { category: 'code', color: '#E44D26', label: 'HTML', iconChar: 'H5' },
+  css:  { category: 'code', color: '#1572B6', label: 'CSS', iconChar: '# ' },
+  scss: { category: 'code', color: '#CC6699', label: 'SCSS', iconChar: '$ ' },
+  less: { category: 'code', color: '#1D365D', label: 'LESS', iconChar: '@ ' },
+  json: { category: 'code', color: '#292929', label: 'JSON', iconChar: '{ }' },
+  xml:  { category: 'code', color: '#FF6600', label: 'XML', iconChar: '</>' },
+  yaml: { category: 'code', color: '#CB171E', label: 'YAML', iconChar: 'YML' },
+  yml:  { category: 'code', color: '#CB171E', label: 'YAML', iconChar: 'YML' },
+  toml: { category: 'code', color: '#8B5CF6', label: 'TOML', iconChar: 'TOML' },
+  php:  { category: 'code', color: '#777BB4', label: 'PHP', iconChar: 'PHP' },
+  py:   { category: 'code', color: '#3776AB', label: 'Python', iconChar: 'Py' },
+  rb:   { category: 'code', color: '#CC342D', label: 'Ruby', iconChar: 'Rb' },
+  go:   { category: 'code', color: '#00ADD8', label: 'Go', iconChar: 'Go' },
+  rs:   { category: 'code', color: '#DEA584', label: 'Rust', iconChar: 'RS' },
+  java: { category: 'code', color: '#ED8B00', label: 'Java', iconChar: 'Java' },
+  c:    { category: 'code', color: '#A8B9CC', label: 'C', iconChar: '.c' },
+  cpp:  { category: 'code', color: '#00599C', label: 'C++', iconChar: 'C++' },
+  h:    { category: 'code', color: '#A8B9CC', label: 'Header', iconChar: '.h' },
+  cs:   { category: 'code', color: '#239120', label: 'C#', iconChar: 'C#' },
+  swift:{ category: 'code', color: '#F05138', label: 'Swift', iconChar: 'Swift' },
+  kt:   { category: 'code', color: '#7F52FF', label: 'Kotlin', iconChar: 'Kt' },
+  dart: { category: 'code', color: '#0175C2', label: 'Dart', iconChar: 'Dart' },
+  lua:  { category: 'code', color: '#000080', label: 'Lua', iconChar: 'Lua' },
+  r:    { category: 'code', color: '#198CE7', label: 'R', iconChar: '.R' },
+  sql:  { category: 'code', color: '#E38C00', label: 'SQL', iconChar: 'SQL' },
+  sh:   { category: 'code', color: '#4EAA25', label: 'Shell', iconChar: '>_' },
+  bash: { category: 'code', color: '#4EAA25', label: 'Bash', iconChar: 'Bash' },
+  zsh:  { category: 'code', color: '#4EAA25', label: 'ZSH', iconChar: 'ZSH' },
+  ps1:  { category: 'code', color: '#012456', label: 'PowerShell', iconChar: 'PS' },
+  dockerfile: { category: 'code', color: '#2496ED', label: 'Docker', iconChar: 'D' },
+  makefile:   { category: 'code', color: '#D62828', label: 'Makefile', iconChar: 'MK' },
+  gemfile:    { category: 'code', color: '#E9573E', label: 'Gemfile', iconChar: 'Gem' },
+  graphql:    { category: 'code', color: '#E10098', label: 'GraphQL', iconChar: 'GQL' },
+  gql:  { category: 'code', color: '#E10098', label: 'GraphQL', iconChar: 'GQL' },
+  vue:  { category: 'code', color: '#4FC08D', label: 'Vue', iconChar: 'Vue' },
+  svelte: { category: 'code', color: '#FF3E00', label: 'Svelte', iconChar: 'Svelte' },
+  tf:   { category: 'code', color: '#844FBA', label: 'Terraform', iconChar: 'TF' },
+
+  // ── Document Files ──
+  doc:  { category: 'document', color: '#2B579A', label: 'Word (old)', iconChar: 'W' },
+  docx: { category: 'document', color: '#2B579A', label: 'Word', iconChar: 'W' },
+  pdf:  { category: 'document', color: '#EF4444', label: 'PDF', iconChar: 'PDF' },
+  txt:  { category: 'text', color: '#9CA3AF', label: 'Text', iconChar: 'TXT' },
+  rtf:  { category: 'document', color: '#6B7280', label: 'RTF', iconChar: 'RTF' },
+  odt:  { category: 'document', color: '#1E6FA8', label: 'OpenDocument', iconChar: 'ODT' },
+  md:   { category: 'document', color: '#083FA1', label: 'Markdown', iconChar: 'MD' },
+  markdown: { category: 'document', color: '#083FA1', label: 'Markdown', iconChar: 'MD' },
+  tex:  { category: 'document', color: '#3D6117', label: 'LaTeX', iconChar: 'TeX' },
+  csv:  { category: 'document', color: '#217346', label: 'CSV', iconChar: 'CSV' },
+  xls:  { category: 'document', color: '#217346', label: 'Excel (old)', iconChar: 'X' },
+  xlsx: { category: 'document', color: '#217346', label: 'Excel', iconChar: 'X' },
+  ppt:  { category: 'document', color: '#D24726', label: 'PowerPoint (old)', iconChar: 'P' },
+  pptx: { category: 'document', color: '#D24726', label: 'PowerPoint', iconChar: 'P' },
+  pages:  { category: 'document', color: '#F9A03F', label: 'Pages', iconChar: 'Pg' },
+  numbers: { category: 'document', color: '#34C759', label: 'Numbers', iconChar: '#' },
+  // ── Image Files ──
+  jpg:  { category: 'image', color: '#EC4899', label: 'JPEG', iconChar: 'JPG' },
+  jpeg: { category: 'image', color: '#EC4899', label: 'JPEG', iconChar: 'JPEG' },
+  png:  { category: 'image', color: '#4A9EFF', label: 'PNG', iconChar: 'PNG' },
+  gif:  { category: 'image', color: '#8B5CF6', label: 'GIF', iconChar: 'GIF' },
+  svg:  { category: 'image', color: '#FFB13B', label: 'SVG', iconChar: 'SVG' },
+  webp: { category: 'image', color: '#4FC08D', label: 'WebP', iconChar: 'WebP' },
+  bmp:  { category: 'image', color: '#6B7280', label: 'BMP', iconChar: 'BMP' },
+  ico:  { category: 'image', color: '#6366F1', label: 'Icon', iconChar: 'ICO' },
+  tiff: { category: 'image', color: '#9333EA', label: 'TIFF', iconChar: 'TIFF' },
+  tif:  { category: 'image', color: '#9333EA', label: 'TIFF', iconChar: 'TIFF' },
+  psd:  { category: 'image', color: '#001E36', label: 'Photoshop', iconChar: 'PS' },
+  ai:   { category: 'image', color: '#FF9A00', label: 'Illustrator', iconChar: 'Ai' },
+  eps:  { category: 'image', color: '#6B21A8', label: 'EPS', iconChar: 'EPS' },
+  raw:  { category: 'image', color: '#D97706', label: 'RAW', iconChar: 'RAW' },
+  cr2:  { category: 'image', color: '#D97706', label: 'Canon RAW', iconChar: 'CR2' },
+  nef:  { category: 'image', color: '#D97706', label: 'Nikon RAW', iconChar: 'NEF' },
+  avif: { category: 'image', color: '#059669', label: 'AVIF', iconChar: 'AVIF' },
+
+  // ── Audio Files ──
+  mp3:  { category: 'audio', color: '#FB923C', label: 'MP3', iconChar: 'MP3' },
+  wav:  { category: 'audio', color: '#0EA5E9', label: 'WAV', iconChar: 'WAV' },
+  flac: { category: 'audio', color: '#10B981', label: 'FLAC', iconChar: 'FLAC' },
+  aac:  { category: 'audio', color: '#EC4899', label: 'AAC', iconChar: 'AAC' },
+  ogg:  { category: 'audio', color: '#8B5CF6', label: 'OGG', iconChar: 'OGG' },
+  wma:  { category: 'audio', color: '#3B82F6', label: 'WMA', iconChar: 'WMA' },
+  m4a:  { category: 'audio', color: '#F97316', label: 'M4A', iconChar: 'M4A' },
+  aiff: { category: 'audio', color: '#6366F1', label: 'AIFF', iconChar: 'AIFF' },
+  opus: { category: 'audio', color: '#84CC16', label: 'OPUS', iconChar: 'OPUS' },
+  mid:  { category: 'audio', color: '#14B8A6', label: 'MIDI', iconChar: 'MIDI' },
+  midi: { category: 'audio', color: '#14B8A6', label: 'MIDI', iconChar: 'MIDI' },
+
+  // ── Video Files ──
+  mp4:  { category: 'video', color: '#8B5CF6', label: 'MP4', iconChar: 'MP4' },
+  avi:  { category: 'video', color: '#EC4899', label: 'AVI', iconChar: 'AVI' },
+  mov:  { category: 'video', color: '#0EA5E9', label: 'MOV', iconChar: 'MOV' },
+  wmv:  { category: 'video', color: '#3B82F6', label: 'WMV', iconChar: 'WMV' },
+  flv:  { category: 'video', color: '#F97316', label: 'FLV', iconChar: 'FLV' },
+  mkv:  { category: 'video', color: '#10B981', label: 'MKV', iconChar: 'MKV' },
+  webm: { category: 'video', color: '#84CC16', label: 'WebM', iconChar: 'WebM' },
+  m4v:  { category: 'video', color: '#F59E0B', label: 'M4V', iconChar: 'M4V' },
+  '3gp':  { category: 'video', color: '#6366F1', label: '3GP', iconChar: '3GP' },
+  ogv:  { category: 'video', color: '#14B8A6', label: 'OGV', iconChar: 'OGV' },
+
+  // ── Archive Files ──
+  zip:  { category: 'archive', color: '#FBBF24', label: 'ZIP', iconChar: 'ZIP' },
+  rar:  { category: 'archive', color: '#EF4444', label: 'RAR', iconChar: 'RAR' },
+  '7z': { category: 'archive', color: '#8B5CF6', label: '7z', iconChar: '7z' },
+  tar:  { category: 'archive', color: '#6366F1', label: 'TAR', iconChar: 'TAR' },
+  gz:   { category: 'archive', color: '#3B82F6', label: 'GZip', iconChar: 'GZ' },
+  bz2:  { category: 'archive', color: '#EC4899', label: 'BZip2', iconChar: 'BZ2' },
+  xz:   { category: 'archive', color: '#F97316', label: 'XZ', iconChar: 'XZ' },
+  tgz:  { category: 'archive', color: '#6366F1', label: 'TGZ', iconChar: 'TGZ' },
+  iso:  { category: 'archive', color: '#0EA5E9', label: 'ISO', iconChar: 'ISO' },
+  dmg:  { category: 'archive', color: '#6B7280', label: 'DMG', iconChar: 'DMG' },
+
+  // ── Database Files ──
+  db:     { category: 'database', color: '#34D399', label: 'Database', iconChar: 'DB' },
+  sqlite: { category: 'database', color: '#34D399', label: 'SQLite', iconChar: 'SQLite' },
+  sqlite3:{ category: 'database', color: '#34D399', label: 'SQLite', iconChar: 'SQLite' },
+  mdb:    { category: 'database', color: '#A0522D', label: 'Access', iconChar: 'MDB' },
+  accdb:  { category: 'database', color: '#A0522D', label: 'Access', iconChar: 'Access' },
+  dbf:    { category: 'database', color: '#34D399', label: 'dBase', iconChar: 'DBF' },
+
+  // ── Config Files ──
+  ini:  { category: 'config', color: '#A78BFA', label: 'INI', iconChar: 'INI' },
+  cfg:  { category: 'config', color: '#A78BFA', label: 'Config', iconChar: 'CFG' },
+  conf: { category: 'config', color: '#A78BFA', label: 'Config', iconChar: 'CONF' },
+  config: { category: 'config', color: '#A78BFA', label: 'Config', iconChar: 'CONF' },
+  properties: { category: 'config', color: '#A78BFA', label: 'Properties', iconChar: 'PROP' },
+  editorconfig: { category: 'config', color: '#A78BFA', label: 'EditorConfig', iconChar: 'EC' },
+  prettierrc: { category: 'config', color: '#F7B93E', label: 'Prettier', iconChar: 'Prettier' },
+  eslintrc:   { category: 'config', color: '#7B2CBF', label: 'ESLint', iconChar: 'ESL' },
+  gitignore:  { category: 'config', color: '#F05032', label: 'Git Ignore', iconChar: 'Git' },
+  env:  { category: 'config', color: '#FBBF24', label: 'Environment', iconChar: '.env' },
+  lock: { category: 'config', color: '#F97316', label: 'Lock', iconChar: 'Lock' },
+
+  // ── Font Files ──
+  ttf:  { category: 'font', color: '#F472B6', label: 'TTF', iconChar: 'TTF' },
+  otf:  { category: 'font', color: '#F472B6', label: 'OTF', iconChar: 'OTF' },
+  woff: { category: 'font', color: '#F472B6', label: 'WOFF', iconChar: 'WOFF' },
+  woff2:{ category: 'font', color: '#F472B6', label: 'WOFF2', iconChar: 'WOFF2' },
+  eot:  { category: 'font', color: '#F472B6', label: 'EOT', iconChar: 'EOT' },
+
+  // ── Certificate Files ──
+  pem: { category: 'certificate', color: '#FCD34D', label: 'Certificate', iconChar: 'PEM' },
+  crt: { category: 'certificate', color: '#FCD34D', label: 'Certificate', iconChar: 'CRT' },
+  cert:{ category: 'certificate', color: '#FCD34D', label: 'Certificate', iconChar: 'CERT' },
+  csr: { category: 'certificate', color: '#FCD34D', label: 'CSR', iconChar: 'CSR' },
+  p12: { category: 'certificate', color: '#FCD34D', label: 'PKCS12', iconChar: 'P12' },
+  pfx: { category: 'certificate', color: '#FCD34D', label: 'PFX', iconChar: 'PFX' },
+  key: { category: 'certificate', color: '#FCD34D', label: 'Key', iconChar: 'Key' },
+
+  // ── Executable / Misc ──
+  exe:   { category: 'executable', color: '#EF4444', label: 'Executable', iconChar: 'EXE' },
+  msi:   { category: 'executable', color: '#EF4444', label: 'Installer', iconChar: 'MSI' },
+  app:   { category: 'executable', color: '#6366F1', label: 'Application', iconChar: 'APP' },
+  apk:   { category: 'executable', color: '#34D399', label: 'Android', iconChar: 'APK' },
+  ipa:   { category: 'executable', color: '#8B5CF6', label: 'iOS', iconChar: 'IPA' },
+  deb:   { category: 'executable', color: '#D70A53', label: 'Debian', iconChar: 'DEB' },
+  rpm:   { category: 'executable', color: '#EF4444', label: 'RPM', iconChar: 'RPM' },
+  flatpak:{category: 'executable', color: '#4A90D9', label: 'Flatpak', iconChar: 'Flatpak' },
+  snap:  { category: 'executable', color: '#FBBF24', label: 'Snap', iconChar: 'Snap' },
+  dll:   { category: 'executable', color: '#6B7280', label: 'DLL', iconChar: 'DLL' },
+  so:    { category: 'executable', color: '#6B7280', label: 'Shared Object', iconChar: '.so' },
+  dylib: { category: 'executable', color: '#6B7280', label: 'Dynamic Lib', iconChar: 'Dylib' },
+
+  // ── Special named files ──
+  readme: { category: 'document', color: '#00F0FF', label: 'README', iconChar: 'README' },
+  license: { category: 'document', color: '#34D399', label: 'License', iconChar: 'LIC' },
+  changelog: { category: 'document', color: '#8B5CF6', label: 'Changelog', iconChar: 'CL' },
+  contributing: { category: 'document', color: '#EC4899', label: 'Contributing', iconChar: 'CONTRIB' },
+};
+
+export function getFileIconConfig(ext: string): FileIconConfig {
+  return FILE_ICON_MAP[ext] || { category: 'unknown', color: '#6B7280', label: 'File', iconChar: '?' };
+}

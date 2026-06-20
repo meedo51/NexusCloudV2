@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
-  FiFile, FiFolder, FiImage, FiFileText, FiDownload,
-  FiTrash2, FiEdit2, FiShare2, FiInfo, FiMove, FiEye,
+  FiDownload, FiTrash2, FiEdit2, FiShare2, FiInfo, FiMove, FiEye,
   FiArchive, FiCheckSquare, FiSquare, FiUnlock, FiStar, FiCode, FiEdit3,
 } from 'react-icons/fi';
 import { FileItem } from '../types';
@@ -15,6 +14,8 @@ import ShareDialog from './ShareDialog';
 import FilePreview from './FilePreview';
 import MoveDialog from './MoveDialog';
 import DetailsDialog from './DetailsDialog';
+import FileIcon from './Icons/FileIcon';
+import FolderIcon from './Icons/FolderIcon';
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -31,10 +32,7 @@ function formatDate(dateStr: string): string {
 }
 
 function getFileIcon(mimeType: string | undefined) {
-  if (mimeType === 'application/folder') return FiFolder;
-  if (mimeType?.startsWith('image/')) return FiImage;
-  if (mimeType?.startsWith('text/') || mimeType === 'application/pdf') return FiFileText;
-  return FiFile;
+  return null;
 }
 
 function isArchive(mimeType: string | undefined, name: string): boolean {
@@ -68,7 +66,6 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
   const [isExtracting, setIsExtracting] = useState(false);
   const [isFav, setIsFav] = useState(favorited || false);
 
-  const Icon = getFileIcon(file.mimeType);
   const isImage = file.mimeType?.startsWith('image/');
   const isPreviewable = file.mimeType?.startsWith('image/') ||
     file.mimeType === 'application/pdf' ||
@@ -211,8 +208,10 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
         ${file.isFolder ? 'bg-cyan/5' : isImage ? 'bg-space' : 'bg-white/5'}`}>
         {isImage && file.path ? (
           <img src={`/uploads/${file.path.split('uploads/')[1] || file.name}`} alt="" className="w-full h-full object-cover" />
+        ) : file.isFolder ? (
+          <FolderIcon size="xl" color="code" />
         ) : (
-          <Icon size={48} className={file.isFolder ? 'text-cyan/60' : 'text-white/30'} />
+          <FileIcon filename={file.originalName || file.name} mime={file.mimeType} size="xl" />
         )}
 
         <button
@@ -307,11 +306,13 @@ export default function FileCard({ file, viewMode, onRefresh, onClick, selected,
             <FiStar size={14} className={isFav ? 'text-yellow fill-yellow' : 'text-white/20 hover:text-white/40'} />
           </button>
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
-            ${file.isFolder ? 'bg-cyan/10 text-cyan' : isImage ? 'bg-coral/10 text-coral' : 'bg-white/5 text-white/60'}`}>
+            ${file.isFolder ? 'bg-cyan/10' : isImage ? 'bg-coral/10' : 'bg-white/5'}`}>
             {isImage && file.path ? (
               <img src={`/uploads/${file.path.split('uploads/')[1] || file.name}`} alt="" className="w-full h-full object-cover rounded-xl" />
+            ) : file.isFolder ? (
+              <FolderIcon size="md" color="code" />
             ) : (
-              <Icon size={20} />
+              <FileIcon filename={file.originalName || file.name} mime={file.mimeType} size="md" />
             )}
           </div>
           <div className="flex-1 min-w-0">
