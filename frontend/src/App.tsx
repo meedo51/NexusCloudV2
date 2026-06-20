@@ -20,6 +20,7 @@ import WorkspaceDetail from './pages/WorkspaceDetail';
 import WebDAVSettings from './pages/WebDAVSettings';
 import DocumentEditorPage from './pages/DocumentEditorPage';
 import DocumentsListPage from './pages/DocumentsListPage';
+import StudioPage from './pages/StudioPage';
 import DocumentFileEditor from './pages/DocumentFileEditor';
 import LoadingScreen from './components/LoadingScreen';
 
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="workspaces/:id" element={<WorkspaceDetail />} />
         <Route path="webdav" element={<WebDAVSettings />} />
         <Route path="documents" element={<DocumentsListPage />} />
+        <Route path="studio" element={<StudioPage />} />
       </Route>
       <Route path="\*" element={<Navigate to="/" replace />} />
           <Route path="/documents/new" element={<ProtectedRoute><DocumentEditorPage /></ProtectedRoute>} />

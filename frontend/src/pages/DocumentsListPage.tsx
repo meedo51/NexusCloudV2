@@ -196,7 +196,7 @@ export default function DocumentsListPage() {
     <div className="p-6" onClick={closeCtxMenu}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Documents</h1>
+          <h1 className="text-2xl font-semibold bg-gradient-to-r from-cyan to-blue-400 bg-clip-text text-transparent">NexusDocs</h1>
           <p className="text-white/40 text-sm mt-1">Create and edit rich text documents</p>
         </div>
         <motion.button

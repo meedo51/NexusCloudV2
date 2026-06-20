@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiHome, FiShare2, FiMenu, FiX, FiFolder, FiStar, FiTrash2,
   FiFileText, FiUser, FiActivity, FiUpload, FiServer, FiShield,
-  FiPlus, FiChevronRight,
+  FiGrid, FiDownload, FiChevronDown, FiChevronRight,
 } from 'react-icons/fi';
 import { filesApi, workspacesApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +18,9 @@ export default function MobileNav() {
   const [folders, setFolders] = useState<FileItem[]>([]);
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({
+    home: true, tools: false, folders: false,
+  });
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,26 +52,11 @@ export default function MobileNav() {
     navigate(path);
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
   const currentFolderId = location.pathname.startsWith('/folder/')
     ? location.pathname.split('/folder/')[1]
     : null;
-
-  const navItems = [
-    { icon: FiHome, label: 'My Files', path: '/', active: location.pathname === '/' || location.pathname.startsWith('/folder/') },
-    { icon: FiStar, label: 'Favorites', path: '/favorites', active: location.pathname === '/favorites' },
-    { icon: FiTrash2, label: 'Trash', path: '/trash', active: location.pathname === '/trash' },
-    { icon: FiShare2, label: 'Shared Links', path: '/shares', active: location.pathname === '/shares' },
-    { icon: FiFileText, label: 'Documents', path: '/documents', active: location.pathname === '/documents' },
-    { icon: FiUser, label: 'Profile', path: '/profile', active: location.pathname === '/profile' },
-  ];
-
-  const toolItems = [
-    { icon: FiActivity, label: 'Activity Log', path: '/activity', active: location.pathname === '/activity' },
-    { icon: FiUpload, label: 'Upload Requests', path: '/upload-requests', active: location.pathname === '/upload-requests' },
-    { icon: FiServer, label: 'Workspaces', path: '/workspaces', active: location.pathname.startsWith('/workspaces') },
-    { icon: FiServer, label: 'WebDAV', path: '/webdav', active: location.pathname === '/webdav' },
-    { icon: FiShield, label: '2FA Settings', path: '/2fa', active: location.pathname === '/2fa' },
-  ];
 
   return (
     <>
@@ -85,13 +73,13 @@ export default function MobileNav() {
             <span className="text-[10px]">Files</span>
           </button>
           <button
-            onClick={() => navTo('/shares')}
+            onClick={() => navTo('/studio')}
             className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
-              location.pathname === '/shares' ? 'text-cyan' : 'text-white/40'
+              isActive('/studio') ? 'text-cyan' : 'text-white/40'
             }`}
           >
-            <FiShare2 size={20} />
-            <span className="text-[10px]">Shares</span>
+            <FiGrid size={20} />
+            <span className="text-[10px]">Studio</span>
           </button>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -105,7 +93,7 @@ export default function MobileNav() {
           <button
             onClick={() => navTo('/profile')}
             className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all ${
-              location.pathname === '/profile' ? 'text-cyan' : 'text-white/40'
+              isActive('/profile') ? 'text-cyan' : 'text-white/40'
             }`}
           >
             <div className="w-5 h-5 rounded-full bg-gradient-to-br from-cyan to-coral flex items-center justify-center text-[8px] font-bold">
@@ -133,7 +121,6 @@ export default function MobileNav() {
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
               className="absolute bottom-0 left-0 right-0 max-h-[80vh] glass-strong rounded-t-3xl border-t border-white/10 overflow-y-auto custom-scrollbar"
             >
-              {/* Handle bar */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 sticky top-0 glass-strong z-10">
                 <h2 className="text-sm font-semibold text-white/80">Navigation</h2>
                 <button
@@ -145,97 +132,158 @@ export default function MobileNav() {
               </div>
 
               <div className="p-4 space-y-0.5">
-                {/* Main nav items */}
-                {navItems.map((item) => (
+                {/* Home section */}
+                <div className="mb-1">
                   <button
-                    key={item.path}
-                    onClick={() => navTo(item.path)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
-                      item.active ? 'glass text-cyan shadow-sm' : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
+                    onClick={() => setExpanded(prev => ({ ...prev, home: !prev.home }))}
+                    className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-medium text-white/30 uppercase tracking-wider hover:text-white/50 transition-colors w-full text-left"
                   >
-                    <item.icon size={18} />
-                    <span>{item.label}</span>
+                    Home
+                    <span className="text-white/10">
+                      {expanded.home ? <FiChevronDown size={10} /> : <FiChevronRight size={10} />}
+                    </span>
                   </button>
-                ))}
+                  {expanded.home && (
+                    <div className="space-y-0.5">
+                      <button onClick={() => navTo('/')}
+                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                          isActive('/') || location.pathname.startsWith('/folder/') ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}>
+                        <FiHome size={16} />
+                        <span>My Space</span>
+                      </button>
+                      <button onClick={() => navTo('/favorites')}
+                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                          isActive('/favorites') ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}>
+                        <FiStar size={16} />
+                        <span>Favorites</span>
+                      </button>
+                      <div className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm opacity-40 cursor-not-allowed text-white/60">
+                        <FiDownload size={16} className="text-white/30" />
+                        <span className="flex-1">Downloads</span>
+                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-white/5 text-white/20">Soon</span>
+                      </div>
+                      <button onClick={() => navTo('/studio')}
+                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                          isActive('/studio') ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}>
+                        <FiGrid size={16} />
+                        <span>Studio</span>
+                      </button>
+                      <button onClick={() => navTo('/trash')}
+                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                          isActive('/trash') ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}>
+                        <FiTrash2 size={16} />
+                        <span>Trash</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* Tools section */}
-                <div className="pt-5 pb-1">
-                  <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider px-3">Tools</span>
-                </div>
-                {toolItems.map((item) => (
+                <div className="mb-1">
                   <button
-                    key={item.path}
-                    onClick={() => navTo(item.path)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
-                      item.active ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
+                    onClick={() => setExpanded(prev => ({ ...prev, tools: !prev.tools }))}
+                    className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-medium text-white/30 uppercase tracking-wider hover:text-white/50 transition-colors w-full text-left"
                   >
-                    <item.icon size={16} />
-                    <span>{item.label}</span>
+                    Tools
+                    <span className="text-white/10">
+                      {expanded.tools ? <FiChevronDown size={10} /> : <FiChevronRight size={10} />}
+                    </span>
                   </button>
-                ))}
-
-                {/* Folders */}
-                {folders.length > 0 && (
-                  <>
-                    <div className="pt-5 pb-1">
-                      <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider px-3">Folders</span>
-                    </div>
-                    {folders.map((folder) => (
-                      <button
-                        key={folder.id}
-                        onClick={() => navTo(`/folder/${folder.id}`)}
+                  {expanded.tools && (
+                    <div className="space-y-0.5">
+                      <button onClick={() => navTo('/shares')}
                         className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
-                          currentFolderId === folder.id ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <FiFolder size={16} className="text-cyan/60" />
-                        <span className="truncate">{folder.name}</span>
+                          isActive('/shares') ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}>
+                        <FiShare2 size={16} />
+                        <span>Shared Links</span>
                       </button>
-                    ))}
-                  </>
-                )}
+                      {[
+                        { icon: FiActivity, label: 'Activity Log', path: '/activity' },
+                        { icon: FiUpload, label: 'Upload Requests', path: '/upload-requests' },
+                        { icon: FiServer, label: 'Workspaces', path: '/workspaces' },
+                        { icon: FiServer, label: 'WebDAV', path: '/webdav' },
+                        { icon: FiShield, label: '2FA Settings', path: '/2fa' },
+                      ].map(item => (
+                        <button key={item.path} onClick={() => navTo(item.path)}
+                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                            (item.path === '/workspaces' ? location.pathname.startsWith('/workspaces') : isActive(item.path)) ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                          }`}>
+                          <item.icon size={16} />
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Folders section */}
+                <div className="mb-1">
+                  <button
+                    onClick={() => setExpanded(prev => ({ ...prev, folders: !prev.folders }))}
+                    className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-medium text-white/30 uppercase tracking-wider hover:text-white/50 transition-colors w-full text-left"
+                  >
+                    <FiFolder size={10} className="opacity-50" />
+                    Folders
+                    <span className="text-white/10">
+                      {expanded.folders ? <FiChevronDown size={10} /> : <FiChevronRight size={10} />}
+                    </span>
+                  </button>
+                  {expanded.folders && (
+                    <div className="space-y-0.5">
+                      {folders.map((folder) => (
+                        <button key={folder.id} onClick={() => navTo(`/folder/${folder.id}`)}
+                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all ${
+                            currentFolderId === folder.id ? 'glass text-cyan' : 'text-white/60 hover:text-white hover:bg-white/5'
+                          }`}>
+                          <FiFolder size={16} className="text-cyan/60" />
+                          <span className="truncate">{folder.name}</span>
+                        </button>
+                      ))}
+                      {folders.length === 0 && (
+                        <p className="text-xs text-white/20 px-3 py-2">No folders yet</p>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Workspaces */}
                 {workspaces.length > 0 && (
-                  <>
-                    <div className="pt-5 pb-1">
-                      <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider px-3">Workspaces</span>
+                  <div className="pt-2">
+                    <div className="px-3 py-2">
+                      <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Workspaces</span>
                     </div>
-                    {workspaces.map((ws) => (
-                      <button
-                        key={ws.id}
-                        onClick={() => navTo(`/workspaces/${ws.id}`)}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all text-white/60 hover:text-white hover:bg-white/5"
-                      >
+                    {workspaces.map(ws => (
+                      <button key={ws.id} onClick={() => navTo(`/workspaces/${ws.id}`)}
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all text-white/60 hover:text-white hover:bg-white/5">
                         <FiServer size={14} className="text-cyan/60" />
                         <span className="truncate">{ws.name}</span>
                       </button>
                     ))}
-                  </>
+                  </div>
                 )}
 
                 {/* Favorites */}
                 {favorites.length > 0 && (
-                  <>
-                    <div className="pt-5 pb-1">
-                      <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider px-3">Favorites</span>
+                  <div className="pt-2">
+                    <div className="px-3 py-2">
+                      <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Favorites</span>
                     </div>
                     {favorites.map(fav => fav.item && (
-                      <button
-                        key={fav.id}
+                      <button key={fav.id}
                         onClick={() => fav.item!.isFolder ? navTo(`/folder/${fav.item!.id}`) : fav.item!.folderId ? navTo(`/folder/${fav.item!.folderId}`) : navTo('/')}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all text-white/60 hover:text-white hover:bg-white/5"
-                      >
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all text-white/60 hover:text-white hover:bg-white/5">
                         <FiStar size={14} className="text-yellow/80" />
                         <span className="truncate">{fav.item.originalName}</span>
                       </button>
                     ))}
-                  </>
+                  </div>
                 )}
 
-                {/* Bottom spacing for safe area */}
                 <div className="h-4" />
               </div>
             </motion.div>
