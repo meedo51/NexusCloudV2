@@ -16,23 +16,10 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    webhook:
-    build:
-      context: .
-      dockerfile: Dockerfile.webhook
-    container_name: nexuscloud-webhook
-    restart: unless-stopped
-    environment:
-      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      # ✅ CHANGED - Mount from actual directory
-      - /root/NexusCloudV2/deploy.sh:/root/NexusCloudV2/deploy.sh:ro
-      - /root/NexusCloudV2:/root/NexusCloudV2:ro
-    networks:
-      - nexuscloud-net
     ports:
       - "${DB_PORT:-5432}:5432"
+    networks:
+      - nexuscloud-net
 
   backend:
     build:
