@@ -32,6 +32,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   mimetype: 'mimeType',
   folderid: 'folderId',
   userid: 'userId',
+  isadmin: 'isAdmin',
   isfolder: 'isFolder',
   deletedat: 'deletedAt',
   createdat: 'createdAt',
@@ -308,6 +309,10 @@ export async function initializeDatabase(): Promise<void> {
     await client.query('CREATE INDEX IF NOT EXISTS idx_workspace_invites_token ON workspace_invites(token)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_workspace_invites_email ON workspace_invites(email)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_fc_search_vector ON file_contents USING GIN(searchVector)');
+
+    // Migrations for existing tables
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS isAdmin BOOLEAN NOT NULL DEFAULT FALSE');
+
     await client.query('COMMIT');
     console.log('Database schema initialized');
   } catch (err) {
