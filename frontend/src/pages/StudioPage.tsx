@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FiFileText, FiCode, FiDatabase, FiImage, FiUsers, FiShield } from 'react-icons/fi';
+import { FiFileText, FiCode, FiDatabase, FiImage, FiUsers, FiShield, FiBookOpen } from 'react-icons/fi';
 import { StudioAppCard } from '../components/Navigation';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,6 +12,15 @@ const apps = [
     status: 'active',
     color: 'from-cyan/20 to-blue-500/20',
     path: '/documents',
+  },
+  {
+    id: 'nexuspdf',
+    name: 'NexusPDF',
+    icon: <FiBookOpen size={24} className="text-purple" />,
+    description: 'Smart PDF reader with highlights, bookmarks, notes, page thumbnails, and reading mode preferences.',
+    status: 'new',
+    color: 'from-purple-500/20 to-cyan-500/20',
+    path: '/pdf',
   },
   {
     id: 'nexuscode',

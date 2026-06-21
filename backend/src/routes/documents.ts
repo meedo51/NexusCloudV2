@@ -2,6 +2,10 @@ import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { prepare } from '../database';
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\n\s*\n/g, '\n').trim();
+}
+
 const router = Router();
 
 // List user documents
@@ -130,17 +134,49 @@ router.post('/:id/export', authenticateToken, async (req: Request, res: Response
   if (!doc) return res.status(404).json({ error: 'Document not found' });
 
   const exportFormat = format || 'html';
-  const filename = doc.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const safeName = doc.name.replace(/[^a-zA-Z0-9_-]/g, '_');
   const exportDir = process.env.EXPORT_DIR || './exports';
   const fs = await import('fs');
   const path = await import('path');
   if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
 
+  let outputContent = '';
+  let mimeType = 'text/plain';
   const extMap: Record<string, string> = { html: 'html', pdf: 'pdf', md: 'md', txt: 'txt' };
   const ext = extMap[exportFormat] || 'html';
-  const filePath = path.join(exportDir, `${filename}_${docId.slice(0, 8)}.${ext}`);
-  fs.writeFileSync(filePath, doc.content, 'utf-8');
-  res.json({ message: 'Exported', path: filePath, format: exportFormat });
+
+  try {
+    switch (exportFormat) {
+      case 'html':
+        outputContent = doc.content;
+        mimeType = 'text/html';
+        break;
+      case 'md': {
+        const TurndownService = (await import('turndown')).default;
+        const turndown = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+        outputContent = turndown.turndown(doc.content);
+        mimeType = 'text/markdown';
+        break;
+      }
+      case 'txt':
+        outputContent = stripHtml(doc.content);
+        mimeType = 'text/plain';
+        break;
+      case 'pdf':
+        outputContent = doc.content;
+        mimeType = 'text/html';
+        break;
+      default:
+        outputContent = doc.content;
+        mimeType = 'text/html';
+    }
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Export conversion failed', detail: err.message });
+  }
+
+  const filePath = path.join(exportDir, `${safeName}_${docId.slice(0, 8)}.${ext}`);
+  fs.writeFileSync(filePath, outputContent, 'utf-8');
+  res.json({ message: 'Exported', path: filePath, format: exportFormat, mimeType });
 });
 
 // List templates

@@ -1,0 +1,44 @@
+/* Custom scrollbar for PDF viewer */
+.pdf-reader .custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pdf-reader .custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pdf-reader .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.pdf-reader .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Reading mode transitions */
+.reading-mode-transition {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Thumbnail scrollbar */
+.thumbnail-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.thumbnail-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+/* Page number input */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Canvas container */
+.canvas-container canvas {
+  image-rendering: auto;
+}

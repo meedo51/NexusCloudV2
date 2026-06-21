@@ -21,6 +21,7 @@ import WebDAVSettings from './pages/WebDAVSettings';
 import DocumentEditorPage from './pages/DocumentEditorPage';
 import DocumentsListPage from './pages/DocumentsListPage';
 import StudioPage from './pages/StudioPage';
+import PDFReaderPage from './pages/PDFReaderPage';
 import DocumentFileEditor from './pages/DocumentFileEditor';
 import AdminDashboard from './pages/AdminDashboard';
 import LoadingScreen from './components/LoadingScreen';
@@ -73,6 +74,8 @@ export default function App() {
         <Route path="documents" element={<DocumentsListPage />} />
         <Route path="studio" element={<StudioPage />} />
         <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        <Route path="pdf" element={<PDFReaderPage />} />
+        <Route path="pdf/:fileId" element={<PDFReaderPage />} />
       </Route>
       <Route path="\*" element={<Navigate to="/" replace />} />
           <Route path="/documents/new" element={<ProtectedRoute><DocumentEditorPage /></ProtectedRoute>} />

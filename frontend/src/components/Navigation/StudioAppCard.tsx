@@ -17,6 +17,7 @@ export default function StudioAppCard({ name, icon, description, status, color, 
   const statusColors: Record<string, string> = {
     active: 'bg-green-500/20 text-green-400',
     beta: 'bg-cyan-500/20 text-cyan-400',
+    new: 'bg-purple-500/20 text-purple-400',
     'coming-soon': 'bg-amber-500/20 text-amber-400',
   };
 

@@ -289,6 +289,93 @@ export async function initializeDatabase(): Promise<void> {
         createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+
+    // PDF reader tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pdf_metadata (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        fileId UUID NOT NULL UNIQUE,
+        userId UUID NOT NULL,
+        pageCount INTEGER NOT NULL DEFAULT 0,
+        title TEXT DEFAULT '',
+        author TEXT DEFAULT '',
+        currentPage INTEGER NOT NULL DEFAULT 1,
+        lastReadAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pdf_highlights (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        fileId UUID NOT NULL,
+        userId UUID NOT NULL,
+        pageNumber INTEGER NOT NULL,
+        color VARCHAR(20) NOT NULL DEFAULT 'yellow',
+        text TEXT NOT NULL DEFAULT '',
+        rects JSONB DEFAULT '[]',
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pdf_bookmarks (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        fileId UUID NOT NULL,
+        userId UUID NOT NULL,
+        pageNumber INTEGER NOT NULL,
+        label TEXT DEFAULT '',
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pdf_notes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        fileId UUID NOT NULL,
+        userId UUID NOT NULL,
+        pageNumber INTEGER NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        x REAL DEFAULT 0,
+        y REAL DEFAULT 0,
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pdf_drawings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        fileId UUID NOT NULL,
+        userId UUID NOT NULL,
+        pageNumber INTEGER NOT NULL,
+        strokes JSONB DEFAULT '[]',
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pdf_preferences (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        fileId UUID NOT NULL,
+        userId UUID NOT NULL,
+        readingMode VARCHAR(10) NOT NULL DEFAULT 'light',
+        zoom REAL NOT NULL DEFAULT 1.0,
+        sidebarOpen BOOLEAN NOT NULL DEFAULT TRUE,
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(fileId, userId)
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pdf_progress (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        fileId UUID NOT NULL,
+        userId UUID NOT NULL,
+        pageNumber INTEGER NOT NULL DEFAULT 1,
+        scrollPosition REAL DEFAULT 0,
+        percentage REAL DEFAULT 0,
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(fileId, userId)
+      )
+    `);
+
     // Indexes
     await client.query('CREATE INDEX IF NOT EXISTS idx_files_userId ON files(userId)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_files_folderId ON files(folderId)');
@@ -310,6 +397,20 @@ export async function initializeDatabase(): Promise<void> {
     await client.query('CREATE INDEX IF NOT EXISTS idx_workspace_invites_token ON workspace_invites(token)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_workspace_invites_email ON workspace_invites(email)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_fc_search_vector ON file_contents USING GIN(searchVector)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_metadata_fileId ON pdf_metadata(fileId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_metadata_userId ON pdf_metadata(userId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_highlights_fileId ON pdf_highlights(fileId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_highlights_userId ON pdf_highlights(userId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_bookmarks_fileId ON pdf_bookmarks(fileId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_bookmarks_userId ON pdf_bookmarks(userId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_notes_fileId ON pdf_notes(fileId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_notes_userId ON pdf_notes(userId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_drawings_fileId ON pdf_drawings(fileId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_drawings_userId ON pdf_drawings(userId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_preferences_fileId ON pdf_preferences(fileId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_preferences_userId ON pdf_preferences(userId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_progress_fileId ON pdf_progress(fileId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pdf_progress_userId ON pdf_progress(userId)');
 
     // File type configuration table
     await client.query(`

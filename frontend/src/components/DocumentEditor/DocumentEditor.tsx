@@ -37,6 +37,7 @@ import { FindReplaceExtension } from '../../extensions/FindReplaceExtension';
 import { FontSizeExtension } from '../../extensions/FontSizeExtension';
 import { ExtendedImage } from '../../extensions/ExtendedImage';
 import { useAutoSave } from '../../hooks/useAutoSave';
+import api from '../../services/api';
 import type { NexusDocument } from '../../types';
 
 interface DocumentEditorProps {
@@ -157,14 +158,17 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
     toast.success('Image inserted');
   }, [editor]);
 
-  const handleExport = async (format: string) => {
-    if (!editor) return;
+  const handleExport = async (format: string): Promise<void> => {
+    if (!editor) throw new Error('Editor not ready');
     let content = '';
     let filename = document.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    const backendFormat = format === 'markdown' ? 'md' : format;
 
     switch (format) {
       case 'html':
         content = editor.getHTML();
+        filename += '.html';
         break;
       case 'markdown': {
         const TurndownService = (await import('turndown')).default;
@@ -202,6 +206,13 @@ export default function DocumentEditor({ document, onSave, onBack }: DocumentEdi
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+
+    try {
+      await api.post(`/documents/${document.id}/export`, { format: backendFormat });
+    } catch {
+      // Non-fatal: file was already downloaded client-side
+    }
+
     toast.success(`Exported as ${format}`);
   };
 
