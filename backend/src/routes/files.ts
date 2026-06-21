@@ -6,8 +6,14 @@ import archiver from 'archiver';
 import AdmZip from 'adm-zip';
 import { prepare, checkQuota, recalculateUsedStorage, logActivity, isFileTypeAllowed } from '../database';
 import { authenticateToken } from '../middleware/auth';
-import { upload, UPLOAD_DIR_PATH } from '../middleware/upload';
+import { upload, UPLOAD_DIR_PATH, fixOriginalName } from '../middleware/upload';
 import { FileEntry } from '../types';
+
+function sendFile(res: Response, filePath: string, filename: string) {
+  const encoded = encodeURIComponent(filename);
+  res.setHeader('Content-Disposition', `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+  res.sendFile(filePath);
+}
 
 const router = Router();
 router.use(authenticateToken);
@@ -144,7 +150,8 @@ router.get('/all-folders', async (req: Request, res: Response) => {
 
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
-  const ext = path.extname(req.file.originalname).toLowerCase();
+  const originalName = fixOriginalName(req.file.originalname);
+  const ext = path.extname(originalName).toLowerCase();
   if (ext && !(await isFileTypeAllowed(ext))) {
     fs.unlinkSync(req.file.path);
     res.status(403).json({ error: `Upload of ${ext} files is disabled by administrator` });
@@ -156,7 +163,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
   if (!q.allowed) { fs.unlinkSync(req.file.path); res.status(403).json({ error: `Storage quota exceeded. ${q.remaining} bytes remaining` }); return; }
   const id = uuidv4();
   const file = req.file;
-  const fileEntry = { id, name: file.filename, originalName: file.originalname, mimeType: file.mimetype, size: file.size, path: file.path.replace(/\\/g, '/'), folderId: folderId || null, userId, isFolder: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  const fileEntry = { id, name: file.filename, originalName, mimeType: file.mimetype, size: file.size, path: file.path.replace(/\\/g, '/'), folderId: folderId || null, userId, isFolder: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   await prepare(`INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, $?, $?)`).run(id, fileEntry.name, fileEntry.originalName, fileEntry.mimeType, fileEntry.size, fileEntry.path, fileEntry.folderId, fileEntry.userId, false, fileEntry.createdAt, fileEntry.updatedAt);
   await recalculateUsedStorage(userId);
   await logActivity({ userId, action: 'upload', itemType: 'file', itemId: String(id), itemName: fileEntry.originalName, details: { size: fileEntry.size, mimeType: fileEntry.mimeType }, ipAddress: String(req.ip || ''), userAgent: String(req.headers['user-agent'] || '') });
@@ -365,7 +372,7 @@ router.get('/:id/download', async (req: Request, res: Response) => {
   if (!file || file.isFolder) { res.status(404).json({ error: 'File not found' }); return; }
   if (!fs.existsSync(file.path)) { res.status(404).json({ error: 'File not found on disk' }); return; }
   await logActivity({ userId, action: 'download', itemType: 'file', itemId: id, itemName: file.originalName, details: { size: file.size }, ipAddress: String(req.ip || ''), userAgent: String(req.headers['user-agent'] || '') });
-  res.download(file.path, file.originalName);
+  sendFile(res, file.path, file.originalName);
 });
 
 router.get('/:id/download-zip', async (req: Request, res: Response) => {
@@ -375,7 +382,9 @@ router.get('/:id/download-zip', async (req: Request, res: Response) => {
   if (!folder) { res.status(404).json({ error: 'Folder not found' }); return; }
   const archive = archiver('zip', { zlib: { level: 9 } });
   res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', `attachment; filename="${folder.name}.zip"`);
+  const zipName = `${folder.originalName || folder.name}.zip`;
+  const encoded = encodeURIComponent(zipName);
+  res.setHeader('Content-Disposition', `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
   archive.pipe(res);
   const rootEntries = await prepare('SELECT * FROM files WHERE folderId = $? AND userId = $? AND deletedAt IS NULL').all(id, userId) as FileEntry[];
   for (const entry of rootEntries) {
@@ -444,9 +453,11 @@ router.post('/batch/zip', async (req: Request, res: Response) => {
   const placeholders = ids.map((_: any, i: number) => `$${i + 1}`).join(',');
   const entries = await prepare(`SELECT * FROM files WHERE id IN (${placeholders}) AND userId = $${ids.length + 1} AND deletedAt IS NULL`).all(...ids, userId) as FileEntry[];
   const archive = archiver('zip', { zlib: { level: 9 } });
-  const name = (zipName || 'batch-export').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const zipBaseName = (zipName || 'batch-export').replace(/[^a-zA-Z0-9_-]/g, '_');
   res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', `attachment; filename="${name}.zip"`);
+  const zipFilename = `${zipBaseName}.zip`;
+  const encoded = encodeURIComponent(zipFilename);
+  res.setHeader('Content-Disposition', `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
   archive.pipe(res);
   for (const entry of entries) {
     if (entry.isFolder) await addFilesToArchive(entry.id, entry.name, userId, archive);

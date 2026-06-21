@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { prepare, logActivity, isFileTypeAllowed } from '../database';
 import { authenticateToken } from '../middleware/auth';
+import { fixOriginalName } from '../middleware/upload';
 import { FileEntry, ShareLink } from '../types';
 
 const router = Router();
@@ -252,12 +253,16 @@ router.get('/download/:token', async (req: Request, res: Response) => {
     }
     const zipBuf = zip.toBuffer();
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}.zip"`);
+    const zipFilename = `${file.originalName}.zip`;
+    const encodedZip = encodeURIComponent(zipFilename);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodedZip}"; filename*=UTF-8''${encodedZip}`);
     res.send(zipBuf);
     return;
   }
 
-  res.download(file.path, file.originalName);
+  const encoded = encodeURIComponent(file.originalName);
+  res.setHeader('Content-Disposition', `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+  res.sendFile(file.path);
 });
 
 router.get('/download/:token/file/:fileId', async (req: Request, res: Response) => {
@@ -307,7 +312,9 @@ router.get('/download/:token/file/:fileId', async (req: Request, res: Response) 
   }
 
   await prepare('UPDATE share_links SET downloads = downloads + 1 WHERE id = $?').run(share.id);
-  res.download(file.path, file.originalName);
+  const encoded = encodeURIComponent(file.originalName);
+  res.setHeader('Content-Disposition', `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+  res.sendFile(file.path);
 });
 
 router.post('/upload/:token', async (req: Request, res: Response) => {
@@ -344,8 +351,9 @@ router.post('/upload/:token', async (req: Request, res: Response) => {
     const userDir = path.join(UPLOAD_DIR_PATH, ownerId);
     if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
 
+    const originalName = fixOriginalName(uploadedFile.originalname);
     const newId = uuidv4();
-    const ext = path.extname(uploadedFile.originalname);
+    const ext = path.extname(originalName).toLowerCase();
     if (ext && !(await isFileTypeAllowed(ext))) {
       fs.unlinkSync(uploadedFile.path);
       res.status(403).json({ error: `Upload of ${ext} files is disabled by administrator` });
@@ -359,13 +367,13 @@ router.post('/upload/:token', async (req: Request, res: Response) => {
     await prepare(`
       INSERT INTO files (id, name, originalName, mimeType, size, path, folderId, userId, isFolder, createdAt, updatedAt)
       VALUES ($?, $?, $?, $?, $?, $?, $?, $?, $?, NOW(), NOW())
-    `).run(newId, safeName, uploadedFile.originalname, uploadedFile.mimetype || 'application/octet-stream', uploadedFile.size, newPath, share.fileId, ownerId, false);
+    `).run(newId, safeName, originalName, uploadedFile.mimetype || 'application/octet-stream', uploadedFile.size, newPath, share.fileId, ownerId, false);
 
     try {
-      await logActivity({ userId: ownerId, action: 'share_upload', itemType: 'file', itemId: newId, itemName: uploadedFile.originalname, details: { shareToken: token }, ipAddress: String(req.ip || ''), userAgent: String(req.headers['user-agent'] || '') });
+      await logActivity({ userId: ownerId, action: 'share_upload', itemType: 'file', itemId: newId, itemName: originalName, details: { shareToken: token }, ipAddress: String(req.ip || ''), userAgent: String(req.headers['user-agent'] || '') });
     } catch {}
 
-    res.status(201).json({ message: 'File uploaded', id: newId, name: uploadedFile.originalname });
+    res.status(201).json({ message: 'File uploaded', id: newId, name: originalName });
   });
 });
 

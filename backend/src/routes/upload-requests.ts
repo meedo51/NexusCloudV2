@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { prepare, recalculateUsedStorage, checkQuota, isFileTypeAllowed } from '../database';
 import { authenticateToken } from '../middleware/auth';
-import { upload, UPLOAD_DIR_PATH } from '../middleware/upload';
+import { upload, UPLOAD_DIR_PATH, fixOriginalName } from '../middleware/upload';
 import { FileEntry, UploadRequest } from '../types';
 
 const router = Router();
@@ -92,7 +92,8 @@ router.post('/upload/:token', upload.single('file'), async (req: Request, res: R
     return;
   }
 
-  const ext = path.extname(req.file.originalname).toLowerCase();
+  const originalName = fixOriginalName(req.file.originalname);
+  const ext = path.extname(originalName).toLowerCase();
   if (ext && !(await isFileTypeAllowed(ext))) {
     fs.unlinkSync(req.file.path);
     res.status(403).json({ error: `Upload of ${ext} files is disabled by administrator` });
@@ -113,7 +114,7 @@ router.post('/upload/:token', upload.single('file'), async (req: Request, res: R
   const fileEntry = {
     id,
     name: req.file.filename,
-    originalName: req.file.originalname,
+    originalName,
     mimeType: req.file.mimetype,
     size: req.file.size,
     path: req.file.path.replace(/\\/g, '/'),

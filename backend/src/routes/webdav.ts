@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prepare, recalculateUsedStorage } from '../database';
 import { FileEntry } from '../types';
 import { authenticateToken } from '../middleware/auth';
+import { fixOriginalName } from '../middleware/upload';
 import pathModule from 'path';
 import fs from 'fs';
 const ENABLE_WEBDAV = process.env.ENABLE_WEBDAV !== 'false';
@@ -87,7 +88,9 @@ if (ENABLE_WEBDAV) {
       const resource = await resolveWebDAVPath(path, user.userId);
       if (!resource || resource.fileEntry.isFolder) { res.status(404).end(); return; }
       if (!fs.existsSync(resource.fileEntry.path)) { res.status(404).end(); return; }
-      res.download(resource.fileEntry.path, resource.fileEntry.originalName);
+      const encoded = encodeURIComponent(resource.fileEntry.originalName);
+      res.setHeader('Content-Disposition', `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+      res.sendFile(resource.fileEntry.path);
     }
 
     async function handlePut(req: Request, res: Response, path: string) {
@@ -97,7 +100,7 @@ if (ENABLE_WEBDAV) {
       if (!user) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
 
       const parts = path.split('/').filter(Boolean);
-      const fileName = parts.pop() || 'file';
+      const fileName = fixOriginalName(parts.pop() || 'file');
       const parentPath = '/' + parts.join('/');
       const parent = await resolveWebDAVPath(parentPath, user.userId);
 

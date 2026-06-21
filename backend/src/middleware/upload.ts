@@ -41,6 +41,10 @@ const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterC
   }
 };
 
+export function fixOriginalName(originalname: string): string {
+  return Buffer.from(originalname, 'latin1').toString('utf8');
+}
+
 export const upload = multer({
   storage,
   fileFilter,
