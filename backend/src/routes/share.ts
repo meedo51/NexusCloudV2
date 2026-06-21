@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
-import { prepare, logActivity } from '../database';
+import { prepare, logActivity, isFileTypeAllowed } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { FileEntry, ShareLink } from '../types';
 
@@ -346,6 +346,11 @@ router.post('/upload/:token', async (req: Request, res: Response) => {
 
     const newId = uuidv4();
     const ext = path.extname(uploadedFile.originalname);
+    if (ext && !(await isFileTypeAllowed(ext))) {
+      fs.unlinkSync(uploadedFile.path);
+      res.status(403).json({ error: `Upload of ${ext} files is disabled by administrator` });
+      return;
+    }
     const safeName = `${newId}${ext}`;
     const newPath = path.join(userDir, safeName).replace(/\\/g, '/');
     fs.renameSync(uploadedFile.path, newPath);

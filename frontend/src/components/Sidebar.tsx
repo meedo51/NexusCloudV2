@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   FiHome, FiShare2, FiChevronRight, FiChevronDown, FiPlus, FiX, FiUser,
   FiTrash2, FiStar, FiActivity, FiUpload, FiShield, FiServer, FiFileText,
-  FiGrid, FiDownload, FiFolder, FiSettings, FiUsers,
+  FiGrid, FiDownload, FiFolder, FiSettings, FiUsers, FiSliders,
 } from 'react-icons/fi';
 import { filesApi, workspacesApi } from '../services/api';
 import { FileItem, FavoriteEntry, Workspace } from '../types';
@@ -186,23 +186,30 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   <FiShield size={16} />
                   <span>Dashboard</span>
                 </button>
-                <button onClick={() => navigate('/admin?tab=users')}
+                <button onClick={() => navigate('/admin', { state: { tab: 'users' } })}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                    location.pathname === '/admin' && new URLSearchParams(location.search).get('tab') === 'users' ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
+                    location.pathname === '/admin' && location.state?.tab === 'users' ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
                   }`}>
                   <FiUsers size={16} />
                   <span>Users</span>
                 </button>
-                <button onClick={() => navigate('/admin?tab=settings')}
+                <button onClick={() => navigate('/admin', { state: { tab: 'filetypes' } })}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                    location.pathname === '/admin' && new URLSearchParams(location.search).get('tab') === 'settings' ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
+                    location.pathname === '/admin' && location.state?.tab === 'filetypes' ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
+                  }`}>
+                  <FiSliders size={16} />
+                  <span>File Types</span>
+                </button>
+                <button onClick={() => navigate('/admin', { state: { tab: 'settings' } })}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                    location.pathname === '/admin' && location.state?.tab === 'settings' ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
                   }`}>
                   <FiSettings size={16} />
                   <span>Settings</span>
                 </button>
-                <button onClick={() => navigate('/admin?tab=audit')}
+                <button onClick={() => navigate('/admin', { state: { tab: 'security' } })}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                    location.pathname === '/admin' && new URLSearchParams(location.search).get('tab') === 'audit' ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
+                    location.pathname === '/admin' && location.state?.tab === 'security' ? 'glass text-cyan shadow-sm' : 'text-white/50 hover:text-white hover:bg-white/5'
                   }`}>
                   <FiActivity size={16} />
                   <span>Audit Logs</span>

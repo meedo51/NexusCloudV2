@@ -66,6 +66,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   foldername: 'folderName',
   parentid: 'parentId',
   storageschemaversion: 'storageSchemaVersion',
+  iscustom: 'isCustom',
 };
 
 function toCamelCase(rows: any[]): any[] {
@@ -310,6 +311,105 @@ export async function initializeDatabase(): Promise<void> {
     await client.query('CREATE INDEX IF NOT EXISTS idx_workspace_invites_email ON workspace_invites(email)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_fc_search_vector ON file_contents USING GIN(searchVector)');
 
+    // File type configuration table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS file_type_config (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        extension VARCHAR(20) NOT NULL UNIQUE,
+        mimeType VARCHAR(255) NOT NULL DEFAULT '',
+        name VARCHAR(255) NOT NULL DEFAULT '',
+        category VARCHAR(50) NOT NULL DEFAULT 'other',
+        enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        isCustom BOOLEAN NOT NULL DEFAULT FALSE,
+        icon VARCHAR(50) NOT NULL DEFAULT 'FiFile',
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // Seed default file types (only if table is empty)
+    const existing = await client.query('SELECT COUNT(*)::bigint as count FROM file_type_config');
+    if (Number(existing.rows[0]?.count || 0) === 0) {
+      const defaults = [
+        // Documents
+        ['pdf', 'application/pdf', 'PDF Document', 'document', 'FiFileText'],
+        ['doc', 'application/msword', 'Word Document', 'document', 'FiFileText'],
+        ['docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Word Document', 'document', 'FiFileText'],
+        ['xls', 'application/vnd.ms-excel', 'Excel Spreadsheet', 'document', 'FiFileText'],
+        ['xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Excel Spreadsheet', 'document', 'FiFileText'],
+        ['ppt', 'application/vnd.ms-powerpoint', 'PowerPoint', 'document', 'FiFileText'],
+        ['pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'PowerPoint', 'document', 'FiFileText'],
+        ['txt', 'text/plain', 'Text File', 'document', 'FiFileText'],
+        ['rtf', 'application/rtf', 'Rich Text', 'document', 'FiFileText'],
+        ['odt', 'application/vnd.oasis.opendocument.text', 'OpenDocument', 'document', 'FiFileText'],
+        ['csv', 'text/csv', 'CSV File', 'data', 'FiFileText'],
+        // Images
+        ['jpg', 'image/jpeg', 'JPEG Image', 'image', 'FiImage'],
+        ['jpeg', 'image/jpeg', 'JPEG Image', 'image', 'FiImage'],
+        ['png', 'image/png', 'PNG Image', 'image', 'FiImage'],
+        ['gif', 'image/gif', 'GIF Image', 'image', 'FiImage'],
+        ['bmp', 'image/bmp', 'Bitmap Image', 'image', 'FiImage'],
+        ['svg', 'image/svg+xml', 'SVG Image', 'image', 'FiImage'],
+        ['webp', 'image/webp', 'WebP Image', 'image', 'FiImage'],
+        ['ico', 'image/x-icon', 'Icon', 'image', 'FiImage'],
+        ['tiff', 'image/tiff', 'TIFF Image', 'image', 'FiImage'],
+        ['tif', 'image/tiff', 'TIFF Image', 'image', 'FiImage'],
+        // Code
+        ['js', 'application/javascript', 'JavaScript', 'code', 'FiCode'],
+        ['ts', 'application/typescript', 'TypeScript', 'code', 'FiCode'],
+        ['jsx', 'text/jsx', 'JSX', 'code', 'FiCode'],
+        ['tsx', 'text/tsx', 'TSX', 'code', 'FiCode'],
+        ['py', 'text/x-python', 'Python', 'code', 'FiCode'],
+        ['java', 'text/x-java', 'Java', 'code', 'FiCode'],
+        ['cpp', 'text/x-c++src', 'C++', 'code', 'FiCode'],
+        ['c', 'text/x-csrc', 'C', 'code', 'FiCode'],
+        ['h', 'text/x-chdr', 'Header', 'code', 'FiCode'],
+        ['rs', 'text/x-rust', 'Rust', 'code', 'FiCode'],
+        ['go', 'text/x-go', 'Go', 'code', 'FiCode'],
+        ['rb', 'text/x-ruby', 'Ruby', 'code', 'FiCode'],
+        ['php', 'text/x-php', 'PHP', 'code', 'FiCode'],
+        ['html', 'text/html', 'HTML', 'code', 'FiCode'],
+        ['css', 'text/css', 'CSS', 'code', 'FiCode'],
+        ['scss', 'text/x-scss', 'SCSS', 'code', 'FiCode'],
+        ['json', 'application/json', 'JSON', 'data', 'FiCode'],
+        ['xml', 'application/xml', 'XML', 'data', 'FiCode'],
+        ['yaml', 'text/yaml', 'YAML', 'data', 'FiCode'],
+        ['yml', 'text/yaml', 'YAML', 'data', 'FiCode'],
+        ['toml', 'text/toml', 'TOML', 'data', 'FiCode'],
+        ['sh', 'text/x-shellscript', 'Shell Script', 'code', 'FiCode'],
+        ['bash', 'text/x-shellscript', 'Bash Script', 'code', 'FiCode'],
+        ['sql', 'text/x-sql', 'SQL', 'code', 'FiCode'],
+        // Video
+        ['mp4', 'video/mp4', 'MP4 Video', 'video', 'FiVideo'],
+        ['avi', 'video/x-msvideo', 'AVI Video', 'video', 'FiVideo'],
+        ['mkv', 'video/x-matroska', 'MKV Video', 'video', 'FiVideo'],
+        ['mov', 'video/quicktime', 'QuickTime', 'video', 'FiVideo'],
+        ['wmv', 'video/x-ms-wmv', 'WMV Video', 'video', 'FiVideo'],
+        ['flv', 'video/x-flv', 'FLV Video', 'video', 'FiVideo'],
+        ['webm', 'video/webm', 'WebM Video', 'video', 'FiVideo'],
+        // Audio
+        ['mp3', 'audio/mpeg', 'MP3 Audio', 'audio', 'FiMusic'],
+        ['wav', 'audio/wav', 'WAV Audio', 'audio', 'FiMusic'],
+        ['ogg', 'audio/ogg', 'OGG Audio', 'audio', 'FiMusic'],
+        ['flac', 'audio/flac', 'FLAC Audio', 'audio', 'FiMusic'],
+        ['aac', 'audio/aac', 'AAC Audio', 'audio', 'FiMusic'],
+        ['wma', 'audio/x-ms-wma', 'WMA Audio', 'audio', 'FiMusic'],
+        ['m4a', 'audio/mp4', 'M4A Audio', 'audio', 'FiMusic'],
+        // Archives
+        ['zip', 'application/zip', 'ZIP Archive', 'archive', 'FiArchive'],
+        ['rar', 'application/vnd.rar', 'RAR Archive', 'archive', 'FiArchive'],
+        ['tar', 'application/x-tar', 'TAR Archive', 'archive', 'FiArchive'],
+        ['gz', 'application/gzip', 'GZip Archive', 'archive', 'FiArchive'],
+        ['7z', 'application/x-7z-compressed', '7-Zip Archive', 'archive', 'FiArchive'],
+        ['bz2', 'application/x-bzip2', 'BZip2 Archive', 'archive', 'FiArchive'],
+      ];
+      for (const row of defaults) {
+        await client.query(
+          'INSERT INTO file_type_config (extension, mimeType, name, category, enabled, isCustom, icon) VALUES ($1, $2, $3, $4, TRUE, FALSE, $5) ON CONFLICT (extension) DO NOTHING',
+          row
+        );
+      }
+    }
+
     // Migrations for existing tables
     await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS isAdmin BOOLEAN NOT NULL DEFAULT FALSE');
 
@@ -384,6 +484,14 @@ export async function pruneVersions(fileId: string): Promise<void> {
       await prepare('DELETE FROM file_versions WHERE id = $1').run(v.id);
     }
   }
+}
+
+export async function isFileTypeAllowed(extension: string): Promise<boolean> {
+  if (!extension) return true;
+  const ext = extension.startsWith('.') ? extension.slice(1).toLowerCase() : extension.toLowerCase();
+  if (!ext) return true;
+  const entry = await prepare('SELECT enabled FROM file_type_config WHERE extension = $1').get(ext) as { enabled: boolean } | undefined;
+  return !entry || entry.enabled;
 }
 
 export { pool };

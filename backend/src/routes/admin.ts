@@ -7,7 +7,7 @@ import os from 'os';
 import net from 'net';
 import { prepare, logActivity } from '../database';
 import { authenticateToken } from '../middleware/auth';
-import { User, UserPublic, FileEntry, ActivityLogEntry } from '../types';
+import { User, UserPublic, FileEntry, ActivityLogEntry, FileTypeConfig } from '../types';
 
 const ADMIN_IP_WHITELIST = (process.env.ADMIN_IP_WHITELIST || '').split(',').map(s => s.trim()).filter(Boolean);
 const ADMIN_REQUIRE_MFA = process.env.ADMIN_REQUIRE_MFA === 'true';
@@ -140,7 +140,7 @@ router.get('/stats', async (_req: Request, res: Response) => {
       totalFolders: Number(totalFolders?.count || 0),
       totalStorage: Number(totalStorage?.total || 0),
       totalDocuments: Number(totalDocuments?.count || 0),
-      activeUsers: Number(activeUsers?.count || 0),
+      activeUsers24h: Number(activeUsers?.count || 0),
       recentRegistrations: Number(recentRegistrations?.count || 0),
       storageByType,
       storageGrowth,
@@ -542,7 +542,8 @@ router.get('/settings', async (_req: Request, res: Response) => {
       MAX_FILE_VERSIONS: parseInt(process.env.MAX_FILE_VERSIONS || '5', 10),
     };
 
-    const system: any = await prepare('SELECT * FROM system_settings').all();
+    await prepare('CREATE TABLE IF NOT EXISTS system_settings (key VARCHAR(255) PRIMARY KEY, value TEXT NOT NULL, updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW())').run();
+    const system: any = await prepare('SELECT * FROM system_settings ORDER BY key').all();
     const dbSettings: Record<string, string> = {};
     for (const row of system) {
       dbSettings[row.key] = row.value;
@@ -677,59 +678,186 @@ router.get('/logs', async (req: Request, res: Response) => {
 router.get('/health', async (_req: Request, res: Response) => {
   try {
     let dbConnected = false;
+    let dbLatencyMs = 0;
     try {
+      const start = Date.now();
       await prepare('SELECT 1').get();
+      dbLatencyMs = Date.now() - start;
       dbConnected = true;
     } catch {
       dbConnected = false;
     }
 
-    let diskStats: any = {};
+    let diskStats: any = { total: 0, free: 0, usedPercent: 0 };
     try {
       const uploadDir = path.resolve(UPLOAD_DIR);
       if (fs.existsSync(uploadDir)) {
         const stats = fs.statfsSync(uploadDir);
+        const total = stats.blocks * stats.bsize;
+        const free = stats.bfree * stats.bsize;
         diskStats = {
-          free: stats.bfree * stats.bsize,
-          total: stats.blocks * stats.bsize,
-          used: (stats.blocks - stats.bfree) * stats.bsize,
-          freeFormatted: `${(stats.bfree * stats.bsize / 1073741824).toFixed(2)} GB`,
-          totalFormatted: `${(stats.blocks * stats.bsize / 1073741824).toFixed(2)} GB`,
+          total,
+          free,
+          usedPercent: total > 0 ? Math.round(((total - free) / total) * 100 * 10) / 10 : 0,
         };
-      } else {
-        diskStats = { error: 'Upload directory does not exist' };
       }
     } catch (diskErr: any) {
-      diskStats = { error: diskErr.message };
+      console.error('Disk stats error:', diskErr.message);
     }
 
     const mem = process.memoryUsage();
+    const loadAvg = os.loadavg();
 
     res.json({
       status: dbConnected ? 'healthy' : 'degraded',
-      database: { connected: dbConnected },
+      database: { connected: dbConnected, latencyMs: dbLatencyMs },
       disk: diskStats,
       memory: {
         rss: mem.rss,
         heapTotal: mem.heapTotal,
         heapUsed: mem.heapUsed,
         external: mem.external,
-        rssFormatted: `${(mem.rss / 1048576).toFixed(2)} MB`,
-        heapUsedFormatted: `${(mem.heapUsed / 1048576).toFixed(2)} MB`,
       },
       uptime: Math.floor(process.uptime()),
-      uptimeFormatted: `${Math.floor(process.uptime() / 86400)}d ${Math.floor((process.uptime() % 86400) / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m`,
       cpu: {
-        loadAvg1m: os.loadavg()[0],
-        loadAvg5m: os.loadavg()[1],
-        loadAvg15m: os.loadavg()[2],
-        cpus: os.cpus().length,
+        loadAvg,
       },
       timestamp: new Date().toISOString(),
     });
   } catch (err: any) {
     console.error('Admin health error:', err);
     res.status(500).json({ error: 'Health check failed' });
+  }
+});
+
+// ── File Type Management ─────────────────────────────────────────────
+
+router.get('/file-types', async (_req: Request, res: Response) => {
+  try {
+    const types = await prepare('SELECT * FROM file_type_config ORDER BY category, extension').all();
+    res.json(types);
+  } catch (err: any) {
+    console.error('File types list error:', err);
+    res.status(500).json({ error: 'Failed to fetch file types' });
+  }
+});
+
+router.post('/file-types', async (req: Request, res: Response) => {
+  try {
+    const { extension, mimeType, name, category, icon } = req.body;
+    if (!extension || !/^[a-zA-Z0-9]+$/.test(extension)) {
+      res.status(400).json({ error: 'Invalid extension (alphanumeric only)' });
+      return;
+    }
+    const existing = await prepare('SELECT id FROM file_type_config WHERE extension = $1').get(extension.toLowerCase());
+    if (existing) {
+      res.status(409).json({ error: 'Extension already exists' });
+      return;
+    }
+    const id = uuidv4();
+    await prepare(
+      'INSERT INTO file_type_config (id, extension, mimeType, name, category, enabled, isCustom, icon) VALUES ($1, $2, $3, $4, $5, TRUE, TRUE, $6)'
+    ).run(id, extension.toLowerCase(), mimeType || '', name || extension.toUpperCase(), category || 'other', icon || 'FiFile');
+    await logActivity({
+      userId: req.user!.userId,
+      action: 'admin_add_file_type',
+      itemType: 'file_type',
+      itemId: id,
+      itemName: extension,
+      ipAddress: String(req.ip || ''),
+      userAgent: String(req.headers['user-agent'] || ''),
+    });
+    const created = await prepare('SELECT * FROM file_type_config WHERE id = $1').get(id);
+    res.status(201).json(created);
+  } catch (err: any) {
+    console.error('Create file type error:', err);
+    res.status(500).json({ error: 'Failed to create file type' });
+  }
+});
+
+router.put('/file-types/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { enabled } = req.body;
+    await prepare('UPDATE file_type_config SET enabled = $1 WHERE id = $2').run(enabled, id);
+    await logActivity({
+      userId: req.user!.userId,
+      action: enabled ? 'admin_enable_file_type' : 'admin_disable_file_type',
+      itemType: 'file_type',
+      itemId: id,
+      ipAddress: String(req.ip || ''),
+      userAgent: String(req.headers['user-agent'] || ''),
+    });
+    const updated = await prepare('SELECT * FROM file_type_config WHERE id = $1').get(id);
+    res.json(updated);
+  } catch (err: any) {
+    console.error('Update file type error:', err);
+    res.status(500).json({ error: 'Failed to update file type' });
+  }
+});
+
+router.delete('/file-types/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const entry = await prepare('SELECT * FROM file_type_config WHERE id = $1').get(id) as FileTypeConfig | undefined;
+    if (!entry) { res.status(404).json({ error: 'Not found' }); return; }
+    if (!entry.isCustom) { res.status(403).json({ error: 'Cannot delete built-in file type' }); return; }
+    await prepare('DELETE FROM file_type_config WHERE id = $1').run(id);
+    await logActivity({
+      userId: req.user!.userId,
+      action: 'admin_delete_file_type',
+      itemType: 'file_type',
+      itemId: id,
+      itemName: entry.extension,
+      ipAddress: String(req.ip || ''),
+      userAgent: String(req.headers['user-agent'] || ''),
+    });
+    res.json({ message: `Deleted custom extension .${entry.extension}` });
+  } catch (err: any) {
+    console.error('Delete file type error:', err);
+    res.status(500).json({ error: 'Failed to delete file type' });
+  }
+});
+
+router.post('/file-types/bulk', async (req: Request, res: Response) => {
+  try {
+    const { category, ids, enabled, preset } = req.body;
+    if (preset) {
+      const presets: Record<string, string[]> = {
+        all: [],
+        documents: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'odt'],
+        code: ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'h', 'rs', 'go', 'rb', 'php', 'html', 'css', 'scss', 'sh', 'bash', 'sql'],
+        media: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico', 'tiff', 'tif', 'mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'mp3', 'wav', 'ogg', 'flac', 'aac', 'wma', 'm4a'],
+        archives: ['zip', 'rar', 'tar', 'gz', '7z', 'bz2'],
+        none: [],
+      };
+      const extList = presets[preset];
+      if (extList === undefined) { res.status(400).json({ error: 'Unknown preset' }); return; }
+      if (preset === 'all') {
+        await prepare('UPDATE file_type_config SET enabled = TRUE').run();
+      } else if (preset === 'none') {
+        await prepare('UPDATE file_type_config SET enabled = FALSE').run();
+      } else {
+        await prepare('UPDATE file_type_config SET enabled = FALSE').run();
+        for (const ext of extList) {
+          await prepare('UPDATE file_type_config SET enabled = TRUE WHERE extension = $1').run(ext);
+        }
+      }
+    } else if (category) {
+      await prepare('UPDATE file_type_config SET enabled = $1 WHERE category = $2').run(enabled ?? true, category);
+    } else if (ids && Array.isArray(ids)) {
+      for (const id of ids) {
+        await prepare('UPDATE file_type_config SET enabled = $1 WHERE id = $2').run(enabled ?? true, id);
+      }
+    } else {
+      res.status(400).json({ error: 'Provide category, ids, or preset' });
+      return;
+    }
+    const types = await prepare('SELECT * FROM file_type_config ORDER BY category, extension').all();
+    res.json(types);
+  } catch (err: any) {
+    console.error('Bulk update file types error:', err);
+    res.status(500).json({ error: 'Failed to update file types' });
   }
 });
 

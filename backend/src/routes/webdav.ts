@@ -1,9 +1,28 @@
 import { Router, Request, Response } from 'express';
-import { prepare } from '../database';
+import { prepare, recalculateUsedStorage } from '../database';
 import { FileEntry } from '../types';
+import { authenticateToken } from '../middleware/auth';
+import pathModule from 'path';
+import fs from 'fs';
 const ENABLE_WEBDAV = process.env.ENABLE_WEBDAV !== 'false';
 
 const router = Router();
+
+// WebDAV settings info (registered before catch-all so it's always reachable)
+router.get('/info', authenticateToken, async (req: Request, res: Response) => {
+  const user = req.user!;
+  const host = req.get('host') || 'localhost:4000';
+  const protocol = req.protocol || 'http';
+  res.json({
+    url: `${protocol}://${host}/webdav`,
+    username: user.username,
+    instructions: {
+      windows: `Map network drive: ${protocol}://${host}/webdav (use your email and password)`,
+      mac: 'Finder → Go → Connect to Server → enter the URL above',
+      linux: `sudo mount -t davfs ${protocol}://${host}/webdav /mnt/nexuscloud`,
+    },
+  });
+});
 
 if (ENABLE_WEBDAV) {
   try {
@@ -36,7 +55,7 @@ if (ENABLE_WEBDAV) {
       const auth = parseBasicAuth(req);
       if (!auth) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const user = await authenticateWebDAV(auth);
-      if (!user) { res.status(403).json({ error: 'Invalid credentials' }); return; }
+      if (!user) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
 
       const resource = await resolveWebDAVPath(path, user.userId);
       if (!resource) { res.status(404).end(); return; }
@@ -64,7 +83,7 @@ if (ENABLE_WEBDAV) {
       const auth = parseBasicAuth(req);
       if (!auth) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const user = await authenticateWebDAV(auth);
-      if (!user) { res.status(403).json({ error: 'Invalid credentials' }); return; }
+      if (!user) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const resource = await resolveWebDAVPath(path, user.userId);
       if (!resource || resource.fileEntry.isFolder) { res.status(404).end(); return; }
       if (!fs.existsSync(resource.fileEntry.path)) { res.status(404).end(); return; }
@@ -75,7 +94,7 @@ if (ENABLE_WEBDAV) {
       const auth = parseBasicAuth(req);
       if (!auth) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const user = await authenticateWebDAV(auth);
-      if (!user) { res.status(403).json({ error: 'Invalid credentials' }); return; }
+      if (!user) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
 
       const parts = path.split('/').filter(Boolean);
       const fileName = parts.pop() || 'file';
@@ -121,7 +140,7 @@ if (ENABLE_WEBDAV) {
       const auth = parseBasicAuth(req);
       if (!auth) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const user = await authenticateWebDAV(auth);
-      if (!user) { res.status(403).json({ error: 'Invalid credentials' }); return; }
+      if (!user) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const resource = await resolveWebDAVPath(path, user.userId);
       if (!resource) { res.status(404).end(); return; }
       await prepare('UPDATE files SET deletedAt = NOW() WHERE id = $?').run(resource.fileEntry.id);
@@ -144,7 +163,7 @@ if (ENABLE_WEBDAV) {
       const auth = parseBasicAuth(req);
       if (!auth) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const user = await authenticateWebDAV(auth);
-      if (!user) { res.status(403).json({ error: 'Invalid credentials' }); return; }
+      if (!user) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const parts = path.split('/').filter(Boolean);
       const folderName = parts.pop() || 'folder';
       const parentPath = '/' + parts.join('/');
@@ -171,7 +190,7 @@ if (ENABLE_WEBDAV) {
       const auth = parseBasicAuth(req);
       if (!auth) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const user = await authenticateWebDAV(auth);
-      if (!user) { res.status(403).json({ error: 'Invalid credentials' }); return; }
+      if (!user) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const source = await resolveWebDAVPath(sourcePath, user.userId);
       if (!source) { res.status(404).end(); return; }
       const destParts = dest.split('/').filter(Boolean);
@@ -202,7 +221,7 @@ if (ENABLE_WEBDAV) {
       const auth = parseBasicAuth(req);
       if (!auth) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const user = await authenticateWebDAV(auth);
-      if (!user) { res.status(403).json({ error: 'Invalid credentials' }); return; }
+      if (!user) { res.status(401).setHeader('WWW-Authenticate', 'Basic realm="NexusCloud WebDAV"').end(); return; }
       const source = await resolveWebDAVPath(sourcePath, user.userId);
       if (!source) { res.status(404).end(); return; }
       const destParts = dest.split('/').filter(Boolean);
@@ -330,7 +349,7 @@ if (ENABLE_WEBDAV) {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
     }
 
-    // Mount WebDAV handler on router
+    // Mount WebDAV handler on router (catch-all for WebDAV protocol methods)
     router.use((req: Request, res: Response, next) => {
       const method = req.method;
       let webdavPath = req.path;
@@ -355,25 +374,5 @@ if (ENABLE_WEBDAV) {
     console.warn('WebDAV setup failed:', err);
   }
 }
-
-// WebDAV settings info
-router.get('/info', async (req: Request, res: Response) => {
-  const user = req.user as any;
-  const host = req.get('host') || 'localhost:4000';
-  const protocol = req.protocol || 'http';
-  res.json({
-    url: `${protocol}://${host}/webdav`,
-    username: user?.username || 'unknown',
-    instructions: {
-      windows: `Map network drive: ${protocol}://${host}/webdav (use your email and password)`,
-      mac: 'Finder → Go → Connect to Server → enter the URL above',
-      linux: `sudo mount -t davfs ${protocol}://${host}/webdav /mnt/nexuscloud`,
-    },
-  });
-});
-
-import pathModule from 'path';
-import fs from 'fs';
-import { recalculateUsedStorage } from '../database';
 
 export default router;

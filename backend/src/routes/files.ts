@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import archiver from 'archiver';
 import AdmZip from 'adm-zip';
-import { prepare, checkQuota, recalculateUsedStorage, logActivity } from '../database';
+import { prepare, checkQuota, recalculateUsedStorage, logActivity, isFileTypeAllowed } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { upload, UPLOAD_DIR_PATH } from '../middleware/upload';
 import { FileEntry } from '../types';
@@ -144,6 +144,12 @@ router.get('/all-folders', async (req: Request, res: Response) => {
 
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  if (ext && !(await isFileTypeAllowed(ext))) {
+    fs.unlinkSync(req.file.path);
+    res.status(403).json({ error: `Upload of ${ext} files is disabled by administrator` });
+    return;
+  }
   const { folderId } = req.body;
   const userId = req.user!.userId;
   const q = await checkQuota(userId, req.file.size);
@@ -172,6 +178,11 @@ router.post('/create', async (req: Request, res: Response) => {
   const { name, content, folderId } = req.body;
   const userId = req.user!.userId;
   if (!name) { res.status(400).json({ error: 'File name is required' }); return; }
+  const ext = path.extname(name).toLowerCase();
+  if (ext && !(await isFileTypeAllowed(ext))) {
+    res.status(403).json({ error: `Creation of ${ext} files is disabled by administrator` });
+    return;
+  }
   const byteLen = Buffer.byteLength(content || '', 'utf-8');
   const q = await checkQuota(userId, byteLen);
   if (!q.allowed) { res.status(403).json({ error: `Storage quota exceeded. ${q.remaining} bytes remaining` }); return; }

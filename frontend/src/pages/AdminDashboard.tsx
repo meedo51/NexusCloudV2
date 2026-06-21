@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiUsers, FiFile, FiHardDrive, FiActivity, FiFileText,
   FiSearch, FiPlus, FiEdit2, FiTrash2, FiX, FiChevronLeft, FiChevronRight,
   FiRefreshCw, FiServer, FiDatabase, FiCpu, FiClock, FiMonitor,
   FiCheckCircle, FiAlertCircle, FiSave, FiUserCheck, FiUserX,
-  FiArrowUp, FiArrowDown, FiFolder,
+  FiArrowUp, FiArrowDown, FiFolder, FiSliders,
 } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
 import toast from 'react-hot-toast';
@@ -15,6 +16,7 @@ import {
   AdminStats, AdminUserListResponse, UserPublic, FileItem,
   SystemHealth, AdminSettings, ActivityLogEntry,
 } from '../types';
+import FileTypeManager from './FileTypeManager';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -55,6 +57,7 @@ const tabs = [
   { id: 'users', label: 'Users', icon: FiUsers },
   { id: 'files', label: 'Files', icon: FiFile },
   { id: 'documents', label: 'Documents', icon: FiFileText },
+  { id: 'filetypes', label: 'File Types', icon: FiSliders },
   { id: 'settings', label: 'Settings', icon: FiServer },
   { id: 'security', label: 'Security', icon: FiActivity },
   { id: 'health', label: 'Health', icon: FiCpu },
@@ -165,7 +168,17 @@ function DeleteConfirmModal({ title, message, onConfirm, onCancel, loading }: De
 
 export default function AdminDashboard() {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<string>(
+    () => (location.state as Record<string, any> | null)?.tab || 'overview'
+  );
+
+  useEffect(() => {
+    const tab = (location.state as Record<string, any> | null)?.tab;
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [location.state]);
 
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -982,6 +995,13 @@ export default function AdminDashboard() {
               </div>
             )}
             <Pagination page={documentsPage} total={documentsTotal} limit={10} onChange={setDocumentsPage} />
+          </motion.div>
+        );
+
+      case 'filetypes':
+        return (
+          <motion.div key="filetypes" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <FileTypeManager />
           </motion.div>
         );
 

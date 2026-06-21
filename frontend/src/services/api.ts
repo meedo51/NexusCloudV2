@@ -6,7 +6,7 @@ import {
   TwoFactorSetup, WebDAVInfo, SearchResponse, FileInfo, NexusDocument,
   DocumentVersion, DocumentTemplate, AdminStats, AdminUserListResponse,
   AdminFileListResponse, AdminDocumentListResponse, AdminSettings,
-  AdminLogListResponse, SystemHealth, UserPublic,
+  AdminLogListResponse, SystemHealth, UserPublic, FileTypeConfig,
 } from '../types';
 
 const api = axios.create({
@@ -198,6 +198,11 @@ export const workspacesApi = {
 };
 
 const plainApi = axios.create({ baseURL: '' });
+plainApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 export const webdavApi = {
   info: () => plainApi.get<WebDAVInfo>('/webdav/info').then(r => r.data),
 };
@@ -277,6 +282,15 @@ export const adminApi = {
     api.get<AdminLogListResponse>('/admin/logs', { params }).then(r => r.data),
   health: () => api.get<SystemHealth>('/admin/health').then(r => r.data),
   seedAdmin: () => api.post<{ message: string; created: boolean }>('/admin/seed-admin').then(r => r.data),
+  // File Type Management
+  fileTypes: () => api.get<FileTypeConfig[]>('/admin/file-types').then(r => r.data),
+  updateFileType: (id: string, data: { enabled?: boolean }) =>
+    api.put<FileTypeConfig>(`/admin/file-types/${id}`, data).then(r => r.data),
+  createFileType: (data: { extension: string; mimeType?: string; name?: string; category?: string }) =>
+    api.post<FileTypeConfig>('/admin/file-types', data).then(r => r.data),
+  deleteFileType: (id: string) => api.delete(`/admin/file-types/${id}`).then(r => r.data),
+  bulkUpdateFileTypes: (data: { category?: string; ids?: string[]; enabled?: boolean; preset?: string }) =>
+    api.post<FileTypeConfig[]>('/admin/file-types/bulk', data).then(r => r.data),
 };
 
 export default api;

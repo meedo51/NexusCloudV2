@@ -182,3 +182,15 @@ export interface SearchResult {
   snippet?: string;
   rank?: number;
 }
+
+export interface FileTypeConfig {
+  id: string;
+  extension: string;
+  mimeType: string;
+  name: string;
+  category: string;
+  enabled: boolean;
+  isCustom: boolean;
+  icon: string;
+  createdAt: string;
+}

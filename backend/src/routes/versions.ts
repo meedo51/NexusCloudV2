@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
-import { prepare, recalculateUsedStorage, checkQuota } from '../database';
+import { prepare, recalculateUsedStorage, checkQuota, isFileTypeAllowed } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { upload, UPLOAD_DIR_PATH } from '../middleware/upload';
 import { FileEntry, FileVersion } from '../types';
@@ -84,6 +84,13 @@ router.post('/replace/:fileId', upload.single('file'), async (req: Request, res:
   if (!file || file.isFolder) {
     fs.unlinkSync(req.file.path);
     res.status(404).json({ error: 'File not found' });
+    return;
+  }
+
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  if (ext && !(await isFileTypeAllowed(ext))) {
+    fs.unlinkSync(req.file.path);
+    res.status(403).json({ error: `Replacement with ${ext} files is disabled by administrator` });
     return;
   }
 

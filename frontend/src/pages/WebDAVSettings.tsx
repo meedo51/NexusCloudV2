@@ -10,6 +10,9 @@ export default function WebDAVSettings() {
     setLoading(true);
     try {
       const data = await webdavApi.info();
+      if (!data || typeof data !== 'object' || !data.instructions) {
+        throw new Error('Invalid response');
+      }
       setInfo(data);
     } catch {}
     setLoading(false);
@@ -55,11 +58,11 @@ export default function WebDAVSettings() {
               </div>
               <div>
                 <h3 className="text-sm font-medium text-cyan mb-1">macOS</h3>
-                <p className="text-sm text-white/60">{info.instructions.mac}</p>
+                <p className="text-sm text-white/60">{info.instructions?.mac || ''}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-cyan mb-1">Linux</h3>
-                <p className="text-sm text-white/60">{info.instructions.linux}</p>
+                <p className="text-sm text-white/60">{info.instructions?.linux || ''}</p>
               </div>
             </div>
           </div>

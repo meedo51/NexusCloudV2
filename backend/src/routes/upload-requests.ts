@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
-import { prepare, recalculateUsedStorage, checkQuota } from '../database';
+import { prepare, recalculateUsedStorage, checkQuota, isFileTypeAllowed } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { upload, UPLOAD_DIR_PATH } from '../middleware/upload';
 import { FileEntry, UploadRequest } from '../types';
@@ -89,6 +89,13 @@ router.post('/upload/:token', upload.single('file'), async (req: Request, res: R
   if (allowedTypes.length > 0 && !allowedTypes.includes(req.file.mimetype)) {
     fs.unlinkSync(req.file.path);
     res.status(403).json({ error: `File type ${req.file.mimetype} not allowed` });
+    return;
+  }
+
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  if (ext && !(await isFileTypeAllowed(ext))) {
+    fs.unlinkSync(req.file.path);
+    res.status(403).json({ error: `Upload of ${ext} files is disabled by administrator` });
     return;
   }
 

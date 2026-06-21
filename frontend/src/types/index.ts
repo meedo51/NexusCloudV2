@@ -352,4 +352,16 @@ export interface FileInfo {
   updatedAt: string;
 }
 
+export interface FileTypeConfig {
+  id: string;
+  extension: string;
+  mimeType: string;
+  name: string;
+  category: string;
+  enabled: boolean;
+  isCustom: boolean;
+  icon: string;
+  createdAt: string;
+}
+
 
