@@ -11,12 +11,12 @@ router.use(authenticateToken);
 router.get('/documents', async (req: Request, res: Response) => {
   const files = await prepare(
     "SELECT f.id, f.name, f.size, f.mimeType, f.createdAt, pm.pageCount FROM files f LEFT JOIN pdf_metadata pm ON pm.fileId = f.id WHERE f.userId = $? AND f.mimeType IN ('application/pdf', 'application/pdf+docupro') AND f.deletedAt IS NULL ORDER BY f.createdAt DESC"
-  ).all((req as any).user.id);
+  ).all((req as any).user.userId);
   res.json(files);
 });
 
 router.get('/documents/:fileId', async (req: Request, res: Response) => {
-  const file = await prepare('SELECT * FROM files WHERE id = $? AND userId = $?').get(req.params.fileId, (req as any).user.id);
+  const file = await prepare('SELECT * FROM files WHERE id = $? AND userId = $?').get(req.params.fileId, (req as any).user.userId);
   if (!file) return res.status(404).json({ error: 'File not found' });
   res.json(file);
 });
@@ -27,7 +27,7 @@ router.post('/merge', async (req: Request, res: Response) => {
   const { PDFDocument } = require('pdf-lib');
   const mergedPdf = await PDFDocument.create();
   for (const fid of fileIds) {
-    const file = await prepare('SELECT * FROM files WHERE id = $? AND userId = $?').get(fid, (req as any).user.id);
+    const file = await prepare('SELECT * FROM files WHERE id = $? AND userId = $?').get(fid, (req as any).user.userId);
     if (!file || !(file as any).path || !fs.existsSync((file as any).path)) continue;
     const srcBytes = fs.readFileSync((file as any).path);
     const srcPdf = await PDFDocument.load(srcBytes, { ignoreEncryption: true });
@@ -42,7 +42,7 @@ router.post('/merge', async (req: Request, res: Response) => {
   const fileId = require('uuid').v4();
   await prepare(
     'INSERT INTO files (id, userId, name, path, size, mimeType, extension, folderId, createdAt, updatedAt) VALUES ($?, $?, $?, $?, $?, $?, $?, $?, NOW(), NOW())'
-  ).run(fileId, (req as any).user.id, `Merged-${Date.now()}.pdf`, outPath, mergedBytes.length, 'application/pdf', 'pdf', null);
+  ).run(fileId, (req as any).user.userId, `Merged-${Date.now()}.pdf`, outPath, mergedBytes.length, 'application/pdf', 'pdf', null);
   await prepare(
     'INSERT INTO pdf_metadata (fileId, pageCount, createdAt) VALUES ($?, $?, NOW())'
   ).run(fileId, mergedPdf.getPageCount());
@@ -52,26 +52,26 @@ router.post('/merge', async (req: Request, res: Response) => {
 router.post('/annotate', async (req: Request, res: Response) => {
   const { fileId, annotations } = req.body;
   if (!fileId) return res.status(400).json({ error: 'fileId required' });
-  const existing = await prepare('SELECT * FROM docupro_pdf_annotations WHERE fileId = $? AND userId = $?').get(fileId, (req as any).user.id);
+  const existing = await prepare('SELECT * FROM docupro_pdf_annotations WHERE fileId = $? AND userId = $?').get(fileId, (req as any).user.userId);
   if (existing) {
     await prepare('UPDATE docupro_pdf_annotations SET annotations = $?, updatedAt = NOW() WHERE fileId = $?').run(JSON.stringify(annotations || []), fileId);
   } else {
     await prepare(
       'INSERT INTO docupro_pdf_annotations (id, fileId, userId, annotations, createdAt, updatedAt) VALUES ($?, $?, $?, $?, NOW(), NOW())'
-    ).run(require('uuid').v4(), fileId, (req as any).user.id, JSON.stringify(annotations || []));
+    ).run(require('uuid').v4(), fileId, (req as any).user.userId, JSON.stringify(annotations || []));
   }
   res.json({ message: 'Annotations saved' });
 });
 
 router.get('/annotations/:fileId', async (req: Request, res: Response) => {
-  const rows = await prepare('SELECT * FROM docupro_pdf_annotations WHERE fileId = $? AND userId = $?').get(req.params.fileId, (req as any).user.id);
+  const rows = await prepare('SELECT * FROM docupro_pdf_annotations WHERE fileId = $? AND userId = $?').get(req.params.fileId, (req as any).user.userId);
   res.json({ annotations: rows ? JSON.parse((rows as any).annotations) : [] });
 });
 
 router.post('/extract-text', async (req: Request, res: Response) => {
   const { fileId } = req.body;
   if (!fileId) return res.status(400).json({ error: 'fileId required' });
-  const file = await prepare('SELECT * FROM files WHERE id = $? AND userId = $?').get(fileId, (req as any).user.id);
+  const file = await prepare('SELECT * FROM files WHERE id = $? AND userId = $?').get(fileId, (req as any).user.userId);
   if (!file || !(file as any).path || !fs.existsSync((file as any).path)) return res.status(404).json({ error: 'File not found' });
   const pdfParse = require('pdf-parse');
   const buf = fs.readFileSync((file as any).path);
