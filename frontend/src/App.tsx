@@ -25,6 +25,15 @@ import PDFReaderPage from './pages/PDFReaderPage';
 import DocumentFileEditor from './pages/DocumentFileEditor';
 import AdminDashboard from './pages/AdminDashboard';
 import LoadingScreen from './components/LoadingScreen';
+import { lazy, Suspense } from 'react';
+
+const WordStudio = lazy(() => import('./apps/DocuPro/WordStudio/WordStudio'));
+const ExcelStudio = lazy(() => import('./apps/DocuPro/ExcelStudio/ExcelStudio'));
+const PDFStudio = lazy(() => import('./apps/DocuPro/PDFStudio/PDFStudio'));
+
+function DocuProSuspense({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<LoadingScreen />}>{children}</Suspense>;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -76,6 +85,9 @@ export default function App() {
         <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="pdf" element={<PDFReaderPage />} />
         <Route path="pdf/:fileId" element={<PDFReaderPage />} />
+        <Route path="studio/docupro-word" element={<DocuProSuspense><WordStudio /></DocuProSuspense>} />
+        <Route path="studio/docupro-excel" element={<DocuProSuspense><ExcelStudio /></DocuProSuspense>} />
+        <Route path="studio/docupro-pdf" element={<DocuProSuspense><PDFStudio /></DocuProSuspense>} />
       </Route>
       <Route path="\*" element={<Navigate to="/" replace />} />
           <Route path="/documents/new" element={<ProtectedRoute><DocumentEditorPage /></ProtectedRoute>} />
