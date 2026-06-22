@@ -1,22 +1,21 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { pdfApi, HighlightData } from '../services/pdfApi';
+import { getPageEl, rectsViewportToPage, getToolbarPosition } from '../utils/pdfCoordinates';
 
-const COLOR_MAP: Record<string, string> = {
-  yellow: '#FFD700',
-  green: '#4ADE80',
-  blue: '#60A5FA',
-  pink: '#F472B6',
-  purple: '#A78BFA',
-};
-
-export function useHighlights(fileId: string, containerRef: React.RefObject<HTMLDivElement | null>, currentPage?: number) {
+export function useHighlights(
+  fileId: string,
+  textLayerRef: React.RefObject<HTMLDivElement | null>,
+  pageContainerRef: React.RefObject<HTMLDivElement | null>,
+  currentPage?: number,
+  zoom?: number,
+) {
   const [highlights, setHighlights] = useState<HighlightData[]>([]);
   const [selectedText, setSelectedText] = useState('');
   const [hlColor, setHlColor] = useState('yellow');
   const [showPopup, setShowPopup] = useState(false);
-  const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
+  const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
   const [currentRects, setCurrentRects] = useState<{ x: number; y: number; width: number; height: number }[]>([]);
-  const selCleanup = useRef<(() => void) | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const loadHighlights = useCallback(async () => {
     try {
@@ -39,58 +38,50 @@ export function useHighlights(fileId: string, containerRef: React.RefObject<HTML
     if (!text) return;
 
     const range = sel.getRangeAt(0);
-    const container = containerRef.current;
-    if (!container) return;
+    const tl = textLayerRef.current;
+    if (!tl) return;
 
-    let found = false;
-    let node = range.startContainer;
+    let inside = false;
+    let node: Node | null = range.startContainer;
     while (node) {
-      if (node instanceof HTMLElement && container.contains(node)) {
-        found = true;
-        break;
-      }
-      if (node === container) { found = true; break; }
-      node = node.parentNode as Node;
+      if (node === tl) { inside = true; break; }
+      node = node.parentNode;
     }
-    if (!found) return;
+    if (!inside) { setShowPopup(false); setSelectedText(''); return; }
 
-    const containerRect = container.getBoundingClientRect();
-    const rects = range.getClientRects();
-    const pageRects = Array.from(rects).map(r => ({
-      x: r.left - containerRect.left,
-      y: r.top - containerRect.top,
-      width: r.width,
-      height: r.height,
-    }));
+    const pageEl = getPageEl(tl.parentElement!);
+    if (!pageEl) return;
 
-    const midX = pageRects.reduce((s, r) => s + r.x + r.width / 2, 0) / pageRects.length;
-    const midY = pageRects.reduce((s, r) => s + r.y, 0) / pageRects.length;
+    const rectsList = range.getClientRects();
+    if (!rectsList.length) return;
+
+    const vpRects = Array.from(rectsList);
+    const pageRects = rectsViewportToPage(vpRects, pageEl, zoom || 1);
+    const pos = getToolbarPosition(range, 10);
 
     setSelectedText(text);
     setCurrentRects(pageRects);
+    setToolbarPos(pos);
     setShowPopup(true);
-    setPopupPos({ x: midX, y: midY - 50 });
-  }, [containerRef]);
+  }, [textLayerRef, zoom]);
 
   useEffect(() => {
-    const onMouseUp = () => setTimeout(handleTextSelection, 50);
+    const onMouseUp = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(handleTextSelection, 100);
+    };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowPopup(false);
-        setSelectedText('');
-      }
+      if (e.key === 'Escape') { setShowPopup(false); setSelectedText(''); }
     };
 
     document.addEventListener('mouseup', onMouseUp);
-    document.addEventListener('touchend', onMouseUp);
     document.addEventListener('keydown', onKeyDown);
-    selCleanup.current = () => {
+    return () => {
       document.removeEventListener('mouseup', onMouseUp);
-      document.removeEventListener('touchend', onMouseUp);
       document.removeEventListener('keydown', onKeyDown);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-    return () => selCleanup.current?.();
   }, [handleTextSelection]);
 
   const applyHighlight = useCallback(async (color?: string) => {
@@ -107,9 +98,7 @@ export function useHighlights(fileId: string, containerRef: React.RefObject<HTML
       window.getSelection()?.removeAllRanges();
       setSelectedText('');
       setShowPopup(false);
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }, [fileId, selectedText, hlColor, currentRects, currentPage]);
 
   const removeHighlight = useCallback(async (id: string) => {
@@ -119,12 +108,13 @@ export function useHighlights(fileId: string, containerRef: React.RefObject<HTML
     } catch { /* ignore */ }
   }, []);
 
-  const getHighlightColor = useCallback((color: string) => {
-    return COLOR_MAP[color] || COLOR_MAP.yellow;
+  const dismissPopup = useCallback(() => {
+    setShowPopup(false);
+    setSelectedText('');
   }, []);
 
   return {
-    highlights, selectedText, hlColor, showPopup, popupPos, currentRects,
-    setHlColor, applyHighlight, removeHighlight, getHighlightColor,
+    highlights, selectedText, hlColor, showPopup, toolbarPos, currentRects,
+    setHlColor, applyHighlight, removeHighlight, dismissPopup,
   };
 }

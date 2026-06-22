@@ -39,15 +39,13 @@ export function usePDFViewer(fileId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
-  const [isPanning, setIsPanning] = useState(false);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [pdfUrl, setPdfUrl] = useState('');
+  const [viewport, setViewport] = useState<any>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pageContainerRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<any>(null);
 
   const loadPdf = useCallback(async () => {
@@ -70,7 +68,7 @@ export function usePDFViewer(fileId: string) {
     }
   }, [fileId]);
 
-  const renderPage = useCallback(async (pageNum: number) => {
+  const renderPage = useCallback(async (pageNum: number, currentZoom: number) => {
     const pdf = pdfDoc;
     const canvas = canvasRef.current;
     if (!pdf || !canvas) return;
@@ -82,12 +80,13 @@ export function usePDFViewer(fileId: string) {
 
     try {
       const page = await pdf.getPage(pageNum);
-      const vp = page.getViewport({ scale: zoom });
+      const vp = page.getViewport({ scale: currentZoom });
+      setViewport(vp);
       canvas.width = vp.width;
       canvas.height = vp.height;
 
       const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      if (!ctx) { canvas.style.width = vp.width + 'px'; canvas.style.height = vp.height + 'px'; return; }
       const renderTask = page.render({ canvasContext: ctx, viewport: vp });
       renderTaskRef.current = renderTask;
       await renderTask.promise;
@@ -101,13 +100,13 @@ export function usePDFViewer(fileId: string) {
       if (err?.name === 'RenderingCancelledException') return;
       toast.error('Failed to render page');
     }
-  }, [pdfDoc, zoom]);
+  }, [pdfDoc]);
 
   useEffect(() => { loadPdf(); }, [loadPdf]);
 
   useEffect(() => {
     if (pdfDoc && currentPage >= 1 && currentPage <= numPages) {
-      renderPage(currentPage);
+      renderPage(currentPage, zoom);
     }
     return () => {
       if (renderTaskRef.current) {
@@ -115,12 +114,12 @@ export function usePDFViewer(fileId: string) {
         renderTaskRef.current = null;
       }
     };
-  }, [pdfDoc, currentPage, zoom]);
+  }, [pdfDoc, currentPage, zoom, numPages]);
 
   const goToPage = useCallback((page: number) => {
     const p = Math.max(1, Math.min(page, numPages));
     setCurrentPage(p);
-    setPanOffset({ x: 0, y: 0 });
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
     pdfApi.updateProgress(fileId, { pageNumber: p, percentage: numPages > 0 ? Math.round((p / numPages) * 100) : 0 }).catch(() => {});
   }, [numPages, fileId]);
 
@@ -142,7 +141,6 @@ export function usePDFViewer(fileId: string) {
 
   const resetZoom = useCallback(() => {
     setZoom(1);
-    setPanOffset({ x: 0, y: 0 });
   }, []);
 
   const handleWheel = useCallback((e: WheelEvent) => {
@@ -154,33 +152,18 @@ export function usePDFViewer(fileId: string) {
   }, [zoomIn, zoomOut]);
 
   useEffect(() => {
-    const el = containerRef.current;
+    const el = scrollRef.current;
     if (!el) return;
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => el.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
 
-  const startPan = useCallback((clientX: number, clientY: number) => {
-    setIsPanning(true);
-    setPanStart({ x: clientX - panOffset.x, y: clientY - panOffset.y });
-  }, [panOffset]);
-
-  const movePan = useCallback((clientX: number, clientY: number) => {
-    if (!isPanning) return;
-    setPanOffset({ x: clientX - panStart.x, y: clientY - panStart.y });
-  }, [isPanning, panStart]);
-
-  const stopPan = useCallback(() => {
-    setIsPanning(false);
-  }, []);
-
   return {
     pdfDoc, numPages, currentPage, loading, error,
-    zoom, panOffset, isPanning, pdfUrl,
-    canvasRef, textLayerRef, containerRef, viewerRef,
+    zoom, pdfUrl, viewport,
+    canvasRef, textLayerRef, scrollRef, pageContainerRef,
     goToPage, goToNext, goToPrev,
     zoomIn, zoomOut, resetZoom,
-    startPan, movePan, stopPan,
     setZoom,
   };
 }

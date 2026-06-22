@@ -5,7 +5,6 @@ export function useNotes(fileId: string, currentPage: number) {
   const [notes, setNotes] = useState<NoteData[]>([]);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteContent, setNoteContent] = useState('');
-  const [notePosition, setNotePosition] = useState({ x: 80, y: 80 });
 
   const loadNotes = useCallback(async () => {
     try {
@@ -22,8 +21,6 @@ export function useNotes(fileId: string, currentPage: number) {
       const note = await pdfApi.addNote(fileId, {
         pageNumber: currentPage,
         content: noteContent,
-        x: notePosition.x,
-        y: notePosition.y,
       });
       setNotes(prev => [note, ...prev]);
       setNoteContent('');
@@ -32,7 +29,7 @@ export function useNotes(fileId: string, currentPage: number) {
     } catch {
       return null;
     }
-  }, [fileId, currentPage, noteContent, notePosition]);
+  }, [fileId, currentPage, noteContent]);
 
   const removeNote = useCallback(async (id: string) => {
     try {
@@ -42,8 +39,8 @@ export function useNotes(fileId: string, currentPage: number) {
   }, []);
 
   return {
-    notes, isAddingNote, noteContent, notePosition,
-    setIsAddingNote, setNoteContent, setNotePosition,
+    notes, isAddingNote, noteContent,
+    setIsAddingNote, setNoteContent,
     addNote, removeNote,
   };
 }

@@ -14,7 +14,9 @@ import NoteTool from './components/NoteTool';
 import BookmarkTool from './components/BookmarkTool';
 import ZoomControls from './components/ZoomControls';
 import PDFNavigation from './components/PDFNavigation';
-import ThumbnailSidebar from './components/ThumbnailSidebar';
+import PDFSidebar from './components/PDFSidebar';
+
+const DRAW_COLORS = ['#00F0FF', '#FF6B6B', '#FFD93D', '#4ADE80', '#A78BFA', '#FFFFFF'];
 
 interface NexusPDFProps {
   fileId: string;
@@ -31,9 +33,9 @@ export default function NexusPDF({ fileId, onBack }: NexusPDFProps) {
   const navigate = useNavigate();
   const viewer = usePDFViewer(fileId);
   const {
-    highlights, selectedText, hlColor, showPopup, popupPos,
-    setHlColor, applyHighlight, removeHighlight,
-  } = useHighlights(fileId, viewer.containerRef, viewer.currentPage);
+    highlights, selectedText, hlColor, showPopup, toolbarPos,
+    setHlColor, applyHighlight, removeHighlight, dismissPopup,
+  } = useHighlights(fileId, viewer.textLayerRef, viewer.pageContainerRef, viewer.currentPage, viewer.zoom);
   const {
     notes, isAddingNote, noteContent,
     setIsAddingNote, setNoteContent,
@@ -45,13 +47,172 @@ export default function NexusPDF({ fileId, onBack }: NexusPDFProps) {
     addBookmark, removeBookmark,
   } = useBookmarks(fileId, viewer.currentPage);
   const {
-    drawings, isDrawing, currentStroke,
-    startStroke, addPoint, endStroke,
-    clearPageDrawings, setIsDrawing,
+    drawings, isDrawing, color: drawColor, brushSize,
+    setIsDrawing, setColor: setDrawColor, setBrushSize,
+    saveStroke, clearPageDrawings,
   } = useDrawings(fileId, viewer.currentPage);
 
   const [prefs, setPrefs] = useState<PDFPreferences>({ readingMode: 'light', zoom: 1, sidebarOpen: true });
-  const [showThumbnails, setShowThumbnails] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(true);
+
+  // Drawing state
+  const drawCanvasRef = useRef<HTMLCanvasElement>(null);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const allStrokesRef = useRef<{ x: number; y: number }[][]>([]);
+  const currentStrokeRef = useRef<{ x: number; y: number }[]>([]);
+  const isDrawingRef = useRef(false);
+
+  const pageWidth = viewer.viewport?.width || 0;
+  const pageHeight = viewer.viewport?.height || 0;
+  const z = viewer.zoom;
+
+  // Sync drawing canvas dims
+  useEffect(() => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas || !pageWidth) return;
+    canvas.width = pageWidth;
+    canvas.height = pageHeight;
+    ctxRef.current = canvas.getContext('2d');
+  }, [pageWidth, pageHeight]);
+
+  // Load existing drawings
+  useEffect(() => {
+    allStrokesRef.current = drawings.flatMap(d => d.strokes);
+    redrawAllStrokes();
+  }, [drawings, pageWidth, pageHeight]);
+
+  const redrawAllStrokes = useCallback(() => {
+    const ctx = ctxRef.current;
+    const canvas = drawCanvasRef.current;
+    if (!ctx || !canvas) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    allStrokesRef.current.forEach(stroke => {
+      if (stroke.length < 2) return;
+      ctx.beginPath();
+      ctx.strokeStyle = drawColor;
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.moveTo(stroke[0].x * z, stroke[0].y * z);
+      for (let i = 1; i < stroke.length; i++) {
+        ctx.lineTo(stroke[i].x * z, stroke[i].y * z);
+      }
+      ctx.stroke();
+    });
+  }, [drawColor, brushSize, z]);
+
+  const getDrawPos = useCallback((clientX: number, clientY: number) => {
+    const cr = drawCanvasRef.current?.getBoundingClientRect();
+    if (!cr) return { x: 0, y: 0 };
+    return {
+      x: (clientX - cr.left) / z,
+      y: (clientY - cr.top) / z,
+    };
+  }, [z]);
+
+  // Redraw when color/size changes
+  useEffect(() => { redrawAllStrokes(); }, [drawColor, brushSize, redrawAllStrokes]);
+
+  // Native event handlers for drawing canvas
+  useEffect(() => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas || !isDrawing) return;
+
+    const onDown = (e: MouseEvent) => {
+      e.preventDefault();
+      const pos = getDrawPos(e.clientX, e.clientY);
+      isDrawingRef.current = true;
+      currentStrokeRef.current = [pos];
+    };
+    const onMove = (e: MouseEvent) => {
+      if (!isDrawingRef.current) return;
+      e.preventDefault();
+      const pos = getDrawPos(e.clientX, e.clientY);
+      currentStrokeRef.current.push(pos);
+      const ctx = ctxRef.current;
+      if (!ctx) return;
+      const pts = currentStrokeRef.current;
+      if (pts.length < 2) return;
+      ctx.strokeStyle = drawColor;
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pts[pts.length - 2].x * z, pts[pts.length - 2].y * z);
+      ctx.lineTo(pts[pts.length - 1].x * z, pts[pts.length - 1].y * z);
+      ctx.stroke();
+    };
+    const onUp = () => {
+      if (!isDrawingRef.current) return;
+      isDrawingRef.current = false;
+      const stroke = currentStrokeRef.current;
+      if (stroke.length >= 2) {
+        allStrokesRef.current.push(stroke);
+        saveStroke(allStrokesRef.current);
+      }
+      currentStrokeRef.current = [];
+    };
+
+    canvas.addEventListener('mousedown', onDown);
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('mouseup', onUp);
+    canvas.addEventListener('mouseleave', onUp);
+
+    const onTouchDown = (e: TouchEvent) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      const pos = getDrawPos(t.clientX, t.clientY);
+      isDrawingRef.current = true;
+      currentStrokeRef.current = [pos];
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDrawingRef.current) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const pos = getDrawPos(t.clientX, t.clientY);
+      currentStrokeRef.current.push(pos);
+      const ctx = ctxRef.current;
+      if (!ctx) return;
+      const pts = currentStrokeRef.current;
+      if (pts.length < 2) return;
+      ctx.strokeStyle = drawColor;
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pts[pts.length - 2].x * z, pts[pts.length - 2].y * z);
+      ctx.lineTo(pts[pts.length - 1].x * z, pts[pts.length - 1].y * z);
+      ctx.stroke();
+    };
+    const onTouchEnd = () => {
+      if (!isDrawingRef.current) return;
+      isDrawingRef.current = false;
+      const stroke = currentStrokeRef.current;
+      if (stroke.length >= 2) {
+        allStrokesRef.current.push(stroke);
+        saveStroke(allStrokesRef.current);
+      }
+      currentStrokeRef.current = [];
+    };
+
+    canvas.addEventListener('touchstart', onTouchDown, { passive: false });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    canvas.addEventListener('touchend', onTouchEnd);
+
+    document.addEventListener('contextmenu', (e: MouseEvent) => e.preventDefault());
+
+    return () => {
+      canvas.removeEventListener('mousedown', onDown);
+      canvas.removeEventListener('mousemove', onMove);
+      canvas.removeEventListener('mouseup', onUp);
+      canvas.removeEventListener('mouseleave', onUp);
+      canvas.removeEventListener('touchstart', onTouchDown);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      canvas.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [isDrawing, drawColor, brushSize, z, saveStroke, getDrawPos]);
+
+  // ---- End drawing state ----
 
   useEffect(() => {
     pdfApi.getPreferences(fileId).then(p => {
@@ -73,21 +234,6 @@ export default function NexusPDF({ fileId, onBack }: NexusPDFProps) {
     }
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (isDrawing) return;
-    viewer.startPan(e.clientX, e.clientY);
-  }, [viewer, isDrawing]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isDrawing) return;
-    viewer.movePan(e.clientX, e.clientY);
-  }, [viewer, isDrawing]);
-
-  const handleMouseUp = useCallback(() => {
-    if (isDrawing) return;
-    viewer.stopPan();
-  }, [viewer, isDrawing]);
-
   const handleAddNote = useCallback(async () => {
     const result = await addNote();
     if (result) toast.success('Note added');
@@ -97,50 +243,6 @@ export default function NexusPDF({ fileId, onBack }: NexusPDFProps) {
     const result = await addBookmark();
     if (result) toast.success('Bookmark added');
   }, [addBookmark]);
-
-  const handleDrawToggle = useCallback(() => {
-    setIsDrawing(!isDrawing);
-  }, [isDrawing, setIsDrawing]);
-
-  const handleDrawPointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
-    e.preventDefault();
-    const rect = viewer.containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    let cx: number, cy: number;
-    if ('touches' in e) {
-      const t = e.touches[0] || e.changedTouches[0];
-      cx = t.clientX - rect.left;
-      cy = t.clientY - rect.top;
-    } else {
-      cx = e.clientX - rect.left;
-      cy = e.clientY - rect.top;
-    }
-    startStroke(cx, cy);
-  }, [isDrawing, startStroke, viewer.containerRef]);
-
-  const handleDrawPointerMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
-    e.preventDefault();
-    const rect = viewer.containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    let cx: number, cy: number;
-    if ('touches' in e) {
-      const t = e.touches[0] || e.changedTouches[0];
-      cx = t.clientX - rect.left;
-      cy = t.clientY - rect.top;
-    } else {
-      cx = e.clientX - rect.left;
-      cy = e.clientY - rect.top;
-    }
-    addPoint(cx, cy);
-  }, [isDrawing, addPoint, viewer.containerRef]);
-
-  const handleDrawPointerUp = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
-    e.preventDefault();
-    endStroke();
-  }, [isDrawing, endStroke]);
 
   const bgMap = { light: 'bg-[#0B0F19]', dark: 'bg-gray-950', sepia: 'bg-amber-950' };
   const borderMap = { light: 'border-white/10', dark: 'border-white/5', sepia: 'border-amber-800/30' };
@@ -185,9 +287,9 @@ export default function NexusPDF({ fileId, onBack }: NexusPDFProps) {
 
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setShowThumbnails(!showThumbnails)}
-            className={`p-1.5 rounded-lg transition-all ${showThumbnails ? 'bg-cyan/20 text-cyan' : 'hover:bg-white/10 text-white/40'}`}
-            title="Toggle thumbnails"
+            onClick={() => setShowSidebar(!showSidebar)}
+            className={`p-1.5 rounded-lg transition-all ${showSidebar ? 'bg-cyan/20 text-cyan' : 'hover:bg-white/10 text-white/40'}`}
+            title="Toggle sidebar"
           >
             <FiSidebar size={13} />
           </button>
@@ -237,6 +339,7 @@ export default function NexusPDF({ fileId, onBack }: NexusPDFProps) {
           <NoteTool
             isAddingNote={isAddingNote}
             noteContent={noteContent}
+            currentPage={viewer.currentPage}
             onContentChange={setNoteContent}
             onAdd={handleAddNote}
             onCancel={() => { setIsAddingNote(false); setNoteContent(''); }}
@@ -245,7 +348,7 @@ export default function NexusPDF({ fileId, onBack }: NexusPDFProps) {
 
           <div className="flex items-center gap-0.5">
             <button
-              onClick={handleDrawToggle}
+              onClick={() => setIsDrawing(!isDrawing)}
               className={`p-1.5 rounded-lg transition-all ${
                 isDrawing ? 'bg-violet-500/20 text-violet ring-1 ring-violet/30' : 'hover:bg-white/10 text-white/40'
               }`}
@@ -278,83 +381,82 @@ export default function NexusPDF({ fileId, onBack }: NexusPDFProps) {
 
       {/* Main viewer area */}
       <div className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 relative">
+        <div className="flex-1 flex">
           {viewer.loading ? (
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center">
               <div className="w-8 h-8 border-2 border-cyan border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <PDFViewer
               canvasRef={viewer.canvasRef}
               textLayerRef={viewer.textLayerRef}
-              containerRef={viewer.containerRef}
+              scrollRef={viewer.scrollRef}
+              pageContainerRef={viewer.pageContainerRef}
               zoom={viewer.zoom}
-              panOffset={viewer.panOffset}
-              isPanning={viewer.isPanning}
               currentPage={viewer.currentPage}
               numPages={viewer.numPages}
               readingMode={prefs.readingMode}
               highlights={highlights}
-              notes={notes}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onNoteDelete={removeNote}
+              drawingCanvasRef={drawCanvasRef}
+              drawingEnabled={isDrawing}
             />
-          )}
-
-          {/* Drawing overlay */}
-          {isDrawing && (
-            <div
-              className="absolute inset-0 z-30"
-              style={{ cursor: 'crosshair' }}
-              onMouseDown={handleDrawPointerDown}
-              onMouseMove={handleDrawPointerMove}
-              onMouseUp={handleDrawPointerUp}
-              onMouseLeave={handleDrawPointerUp}
-              onTouchStart={handleDrawPointerDown}
-              onTouchMove={handleDrawPointerMove}
-              onTouchEnd={handleDrawPointerUp}
-            />
-          )}
-
-          {/* Drawing stroke preview */}
-          {isDrawing && currentStroke.current.length > 1 && (
-            <svg className="absolute inset-0 z-20 pointer-events-none" style={{ width: '100%', height: '100%' }}>
-              <polyline
-                points={currentStroke.current.map(p => `${p.x},${p.y}`).join(' ')}
-                fill="none"
-                stroke="#A78BFA"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
           )}
         </div>
 
-        {/* Thumbnail sidebar */}
-        {showThumbnails && (
-          <ThumbnailSidebar
+        {/* Sidebar */}
+        {showSidebar && (
+          <PDFSidebar
             pdfDoc={viewer.pdfDoc}
             currentPage={viewer.currentPage}
+            notes={notes}
             onPageClick={viewer.goToPage}
-            onClose={() => setShowThumbnails(false)}
+            onNoteDelete={removeNote}
+            onClose={() => setShowSidebar(false)}
           />
         )}
       </div>
 
-      {/* Highlight popup */}
+      {/* Drawing controls */}
+      {isDrawing && (
+        <div className="fixed bottom-24 right-4 z-50 flex flex-col gap-2 p-3 bg-black/60 backdrop-blur-xl rounded-xl border border-white/10 shadow-2xl">
+          <div className="flex gap-1.5">
+            {DRAW_COLORS.map(c => (
+              <button
+                key={c}
+                onClick={() => setDrawColor(c)}
+                className={`w-5 h-5 rounded-full border-2 transition-all ${
+                  drawColor === c ? 'border-white scale-110' : 'border-transparent hover:scale-110'
+                }`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-white/40 w-6">{brushSize}px</span>
+            <input
+              type="range"
+              min="1"
+              max="12"
+              value={brushSize}
+              onChange={e => setBrushSize(parseInt(e.target.value))}
+              className="w-20 accent-violet-500"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Highlight toolbar */}
       <HighlighterTool
         show={showPopup}
-        x={popupPos.x}
-        y={popupPos.y}
+        x={toolbarPos.x}
+        y={toolbarPos.y}
         selectedText={selectedText}
         highlightColor={hlColor}
         onColorChange={setHlColor}
         onApply={applyHighlight}
         onClose={() => {
           window.getSelection()?.removeAllRanges();
+          dismissPopup();
         }}
       />
 
@@ -368,7 +470,7 @@ export default function NexusPDF({ fileId, onBack }: NexusPDFProps) {
           onPageChange={viewer.goToPage}
         />
         {viewer.zoom > 1 && !isDrawing && (
-          <span className="text-xs text-white/30">Ctrl+scroll to zoom · Drag to pan</span>
+          <span className="text-xs text-white/30 hidden sm:block">Ctrl+Scroll to zoom · Scroll to pan</span>
         )}
         <button
           onClick={viewer.resetZoom}
