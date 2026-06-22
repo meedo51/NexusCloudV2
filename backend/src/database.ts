@@ -383,6 +383,53 @@ export async function initializeDatabase(): Promise<void> {
       )
     `);
 
+    // DocuPro tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS docupro_word_documents (
+        id UUID PRIMARY KEY,
+        userId UUID NOT NULL,
+        name TEXT NOT NULL DEFAULT 'Untitled',
+        content TEXT NOT NULL DEFAULT '',
+        wordCount INTEGER NOT NULL DEFAULT 0,
+        format VARCHAR(10) NOT NULL DEFAULT 'html',
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS docupro_word_versions (
+        id UUID PRIMARY KEY,
+        documentId UUID NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        wordCount INTEGER NOT NULL DEFAULT 0,
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS docupro_excel_spreadsheets (
+        id UUID PRIMARY KEY,
+        userId UUID NOT NULL,
+        name TEXT NOT NULL DEFAULT 'Untitled',
+        data JSONB DEFAULT '{}',
+        rowCount INTEGER NOT NULL DEFAULT 50,
+        colCount INTEGER NOT NULL DEFAULT 26,
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS docupro_pdf_annotations (
+        id UUID PRIMARY KEY,
+        fileId UUID NOT NULL,
+        userId UUID NOT NULL,
+        annotations JSONB DEFAULT '[]',
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // DocuPro database column aliases
+
     // Indexes
     await client.query('CREATE INDEX IF NOT EXISTS idx_files_userId ON files(userId)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_files_folderId ON files(folderId)');

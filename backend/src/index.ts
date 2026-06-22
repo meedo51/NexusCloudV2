@@ -24,6 +24,9 @@ import searchRoutes from './routes/search';
 import documentRoutes from './routes/documents';
 import pdfRoutes from './routes/pdf';
 import adminRoutes from './routes/admin';
+import docuproWordRoutes from './routes/docupro/word';
+import docuproExcelRoutes from './routes/docupro/excel';
+import docuproPdfRoutes from './routes/docupro/pdf';
 import { jobQueue } from './services/queue';
 import { extractText, shouldExtract } from './services/text-extractor';
 
@@ -61,6 +64,9 @@ app.use('/api/share', shareLimiter, shareRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/search', searchRoutes);
 if (ENABLE_WEBDAV) app.use('/webdav', webdavRoutes);
+app.use('/api/docupro/word', docuproWordRoutes);
+app.use('/api/docupro/excel', docuproExcelRoutes);
+app.use('/api/docupro/pdf', docuproPdfRoutes);
 
 // Background job: text extraction on file upload
 if (ENABLE_FULLTEXT_SEARCH) {
