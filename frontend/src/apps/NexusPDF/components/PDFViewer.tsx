@@ -47,14 +47,14 @@ export default function PDFViewer({
   return (
     <div
       ref={containerRef as any}
-      className="relative flex-1 overflow-hidden select-none"
+      className="relative flex-1 overflow-hidden"
       style={{ backgroundColor: bgMap[readingMode] }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
       onMouseLeave={onMouseUp}
     >
-      <div className="flex items-center justify-center min-h-full p-4">
+      <div className="flex items-start justify-center min-h-full p-4">
         <div
           className="relative shadow-2xl"
           style={{
@@ -66,13 +66,13 @@ export default function PDFViewer({
         >
           <canvas
             ref={canvasRef as any}
-            className="block"
+            className="block select-none"
           />
 
           <div
             ref={textLayerRef as any}
             className="absolute inset-0 overflow-hidden"
-            style={{ lineHeight: 1, pointerEvents: 'none' }}
+            style={{ lineHeight: 1 }}
           />
 
           {pageHighlights.map(hl =>
@@ -85,7 +85,7 @@ export default function PDFViewer({
                   top: rect.y,
                   width: rect.width,
                   height: rect.height,
-                  backgroundColor: (COLOR_MAP[hl.color] || COLOR_MAP.yellow) + '50',
+                  backgroundColor: (COLOR_MAP[hl.color] || COLOR_MAP.yellow) + '4D',
                   mixBlendMode: 'multiply',
                 }}
               />

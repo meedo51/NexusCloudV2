@@ -26,8 +26,8 @@ export function renderTextLayer(
     span.style.whiteSpace = 'pre';
     span.style.pointerEvents = 'auto';
     span.style.cursor = 'text';
+    span.style.userSelect = 'text';
     span.style.transformOrigin = '0% 0%';
-    span.dataset.pageIndex = String(textContent.items.indexOf(item));
     container.appendChild(span);
   });
 }
@@ -43,14 +43,12 @@ export function usePDFViewer(fileId: string) {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [pdfUrl, setPdfUrl] = useState('');
-  const [textContent, setTextContent] = useState<any>(null);
-  const [viewport, setViewport] = useState<any>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
-  const pageRef = useRef<pdfjsLib.PDFPageProxy | null>(null);
+  const renderTaskRef = useRef<any>(null);
 
   const loadPdf = useCallback(async () => {
     setLoading(true);
@@ -63,7 +61,6 @@ export function usePDFViewer(fileId: string) {
       setNumPages(pdf.numPages);
       const meta = await pdfApi.getMetadata(fileId);
       setCurrentPage(meta?.currentPage || 1);
-
       const prefs = await pdfApi.getPreferences(fileId);
       setZoom(prefs?.zoom || 1);
     } catch {
@@ -78,25 +75,30 @@ export function usePDFViewer(fileId: string) {
     const canvas = canvasRef.current;
     if (!pdf || !canvas) return;
 
+    if (renderTaskRef.current) {
+      try { renderTaskRef.current.cancel(); } catch {}
+      renderTaskRef.current = null;
+    }
+
     try {
       const page = await pdf.getPage(pageNum);
-      pageRef.current = page;
       const vp = page.getViewport({ scale: zoom });
-      setViewport(vp);
       canvas.width = vp.width;
       canvas.height = vp.height;
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const renderTask = page.render({ canvasContext: ctx, viewport: vp });
+      renderTaskRef.current = renderTask;
+      await renderTask.promise;
+      renderTaskRef.current = null;
 
       const text = await page.getTextContent();
-      setTextContent(text);
-
       if (textLayerRef.current) {
         renderTextLayer(text, vp, textLayerRef.current);
       }
-    } catch {
+    } catch (err: any) {
+      if (err?.name === 'RenderingCancelledException') return;
       toast.error('Failed to render page');
     }
   }, [pdfDoc, zoom]);
@@ -107,13 +109,13 @@ export function usePDFViewer(fileId: string) {
     if (pdfDoc && currentPage >= 1 && currentPage <= numPages) {
       renderPage(currentPage);
     }
-  }, [pdfDoc, currentPage, renderPage, numPages]);
-
-  useEffect(() => {
-    if (pdfDoc && currentPage >= 1 && currentPage <= numPages) {
-      renderPage(currentPage);
-    }
-  }, [zoom]);
+    return () => {
+      if (renderTaskRef.current) {
+        try { renderTaskRef.current.cancel(); } catch {}
+        renderTaskRef.current = null;
+      }
+    };
+  }, [pdfDoc, currentPage, zoom]);
 
   const goToPage = useCallback((page: number) => {
     const p = Math.max(1, Math.min(page, numPages));
@@ -175,7 +177,6 @@ export function usePDFViewer(fileId: string) {
   return {
     pdfDoc, numPages, currentPage, loading, error,
     zoom, panOffset, isPanning, pdfUrl,
-    textContent, viewport,
     canvasRef, textLayerRef, containerRef, viewerRef,
     goToPage, goToNext, goToPrev,
     zoomIn, zoomOut, resetZoom,

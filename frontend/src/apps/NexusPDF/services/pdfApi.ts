@@ -24,6 +24,12 @@ export interface BookmarkData {
   createdAt: string;
 }
 
+export interface DrawingData {
+  id: string;
+  pageNumber: number;
+  strokes: { x: number; y: number; pressure?: number }[][];
+}
+
 export interface PDFPreferences {
   readingMode: 'light' | 'dark' | 'sepia';
   zoom: number;
@@ -93,6 +99,19 @@ async function updatePreferences(fileId: string, data: Partial<PDFPreferences>) 
   return api.patch(`/pdf/preferences/${fileId}`, data).then(r => r.data as PDFPreferences);
 }
 
+async function getDrawings(fileId: string, page?: number) {
+  const qs = page ? `?page=${page}` : '';
+  return api.get(`/pdf/drawings/${fileId}${qs}`).then(r => r.data as DrawingData[]);
+}
+
+async function addDrawing(fileId: string, data: { pageNumber: number; strokes: any[] }) {
+  return api.post(`/pdf/drawings/${fileId}`, data).then(r => r.data as DrawingData);
+}
+
+async function deleteDrawing(id: string) {
+  return api.delete(`/pdf/drawings/${id}`).then(r => r.data);
+}
+
 export const pdfApi = {
   getFileUrl,
   getMetadata,
@@ -107,6 +126,9 @@ export const pdfApi = {
   getBookmarks,
   addBookmark,
   deleteBookmark,
+  getDrawings,
+  addDrawing,
+  deleteDrawing,
   getPreferences,
   updatePreferences,
 };
