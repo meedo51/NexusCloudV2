@@ -1,122 +1,120 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
+import { RefObject, MouseEvent } from 'react';
+import { HighlightData } from '../services/pdfApi';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+const COLOR_MAP: Record<string, string> = {
+  yellow: '#FFD700',
+  green: '#4ADE80',
+  blue: '#60A5FA',
+  pink: '#F472B6',
+  purple: '#A78BFA',
+};
 
 interface PDFViewerProps {
-  url: string;
-  currentPage: number;
+  canvasRef: RefObject<HTMLCanvasElement | null>;
+  textLayerRef: RefObject<HTMLDivElement | null>;
+  containerRef: RefObject<HTMLDivElement | null>;
   zoom: number;
+  panOffset: { x: number; y: number };
+  isPanning: boolean;
+  currentPage: number;
+  numPages: number;
   readingMode: 'light' | 'dark' | 'sepia';
-  onPageRendered?: (pageNumber: number) => void;
-  onNumPages?: (count: number) => void;
-  onTextSelected?: (text: string, rects: any[]) => void;
+  highlights: HighlightData[];
+  notes: { id: string; pageNumber: number; content: string; x: number; y: number }[];
+  onMouseDown: (e: MouseEvent) => void;
+  onMouseMove: (e: MouseEvent) => void;
+  onMouseUp: (e: MouseEvent) => void;
+  onNoteDelete: (id: string) => void;
 }
 
+const bgMap = {
+  light: '#0B0F19',
+  dark: '#030712',
+  sepia: '#292524',
+};
+
 export default function PDFViewer({
-  url, currentPage, zoom, readingMode,
-  onPageRendered, onNumPages, onTextSelected,
+  canvasRef, textLayerRef, containerRef,
+  zoom, panOffset, isPanning,
+  currentPage, numPages, readingMode,
+  highlights, notes,
+  onMouseDown, onMouseMove, onMouseUp,
+  onNoteDelete,
 }: PDFViewerProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
-  const [rendering, setRendering] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadPdf() {
-      try {
-        const pdf = await pdfjsLib.getDocument(url).promise;
-        if (cancelled) return;
-        pdfDocRef.current = pdf;
-        onNumPages?.(pdf.numPages);
-      } catch {
-        console.error('Failed to load PDF');
-      }
-    }
-    loadPdf();
-    return () => { cancelled = true; };
-  }, [url, onNumPages]);
-
-  const renderPage = useCallback(async (pageNum: number) => {
-    const pdf = pdfDocRef.current;
-    const canvas = canvasRef.current;
-    if (!pdf || !canvas) return;
-
-    setRendering(true);
-    try {
-      const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale: zoom });
-      const container = containerRef.current;
-      if (container) {
-        container.style.width = `${viewport.width}px`;
-        container.style.height = `${viewport.height}px`;
-      }
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      if (readingMode === 'dark') {
-        ctx.fillStyle = '#1a1a2e';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      } else if (readingMode === 'sepia') {
-        ctx.fillStyle = '#f5e6c8';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      onPageRendered?.(pageNum);
-    } catch {
-      console.error('Failed to render page', pageNum);
-    } finally {
-      setRendering(false);
-    }
-  }, [zoom, readingMode, onPageRendered]);
-
-  useEffect(() => {
-    if (pdfDocRef.current) {
-      renderPage(currentPage);
-    }
-  }, [currentPage, renderPage]);
-
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || !selection.toString().trim()) {
-      onTextSelected?.('', []);
-      return;
-    }
-    const text = selection.toString();
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    const container = containerRef.current;
-    if (!container) return;
-    const containerRect = container.getBoundingClientRect();
-    const rects = [{
-      x: rect.left - containerRect.left,
-      y: rect.top - containerRect.top,
-      w: rect.width,
-      h: rect.height,
-    }];
-    onTextSelected?.(text, rects);
-  }, [onTextSelected]);
-
-  const bgMap = { light: 'bg-[#0B0F19]', dark: 'bg-gray-950', sepia: 'bg-amber-950' };
+  const pageHighlights = highlights.filter(h => h.pageNumber === currentPage || h.pageNumber === 0);
+  const pageNotes = notes.filter(n => n.pageNumber === currentPage);
 
   return (
-    <div className={`flex-1 overflow-auto custom-scrollbar ${bgMap[readingMode]} relative`} ref={containerRef}>
-      <div className="flex flex-col items-center py-4 min-h-full">
-        {rendering && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div className="w-8 h-8 border-2 border-cyan border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-        <canvas
-          ref={canvasRef}
-          onMouseUp={handleMouseUp}
-          className="shadow-2xl rounded-sm"
-          style={{ maxWidth: '100%', height: 'auto' }}
-        />
+    <div
+      ref={containerRef as any}
+      className="relative flex-1 overflow-hidden select-none"
+      style={{ backgroundColor: bgMap[readingMode] }}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+    >
+      <div className="flex items-center justify-center min-h-full p-4">
+        <div
+          className="relative shadow-2xl"
+          style={{
+            transform: `scale(${zoom}) translate(${panOffset.x / zoom}px, ${panOffset.y / zoom}px)`,
+            transformOrigin: 'top left',
+            cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default',
+            transition: isPanning ? 'none' : 'transform 0.2s ease',
+          }}
+        >
+          <canvas
+            ref={canvasRef as any}
+            className="block"
+          />
+
+          <div
+            ref={textLayerRef as any}
+            className="absolute inset-0 overflow-hidden"
+            style={{ lineHeight: 1, pointerEvents: 'none' }}
+          />
+
+          {pageHighlights.map(hl =>
+            (hl.rects || []).map((rect, i) => (
+              <div
+                key={`${hl.id}-${i}`}
+                className="absolute pointer-events-none rounded-sm"
+                style={{
+                  left: rect.x,
+                  top: rect.y,
+                  width: rect.width,
+                  height: rect.height,
+                  backgroundColor: (COLOR_MAP[hl.color] || COLOR_MAP.yellow) + '50',
+                  mixBlendMode: 'multiply',
+                }}
+              />
+            ))
+          )}
+
+          {pageNotes.map(note => (
+            <div
+              key={note.id}
+              className="absolute w-56 p-2.5 rounded-lg backdrop-blur-xl border shadow-xl group"
+              style={{
+                left: note.x,
+                top: note.y,
+                backgroundColor: 'rgba(251, 191, 36, 0.08)',
+                borderColor: 'rgba(251, 191, 36, 0.25)',
+              }}
+            >
+              <div className="flex items-start justify-between gap-1">
+                <p className="text-xs text-white/90 leading-relaxed">{note.content}</p>
+                <button
+                  onClick={() => onNoteDelete(note.id)}
+                  className="shrink-0 p-0.5 rounded hover:bg-white/10 text-white/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

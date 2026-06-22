@@ -67,6 +67,13 @@ const COLUMN_ALIASES: Record<string, string> = {
   parentid: 'parentId',
   storageschemaversion: 'storageSchemaVersion',
   iscustom: 'isCustom',
+  pagecount: 'pageCount',
+  currentpage: 'currentPage',
+  lastreadat: 'lastReadAt',
+  pagenumber: 'pageNumber',
+  scrollposition: 'scrollPosition',
+  readingmode: 'readingMode',
+  sidebaropen: 'sidebarOpen',
 };
 
 function toCamelCase(rows: any[]): any[] {
