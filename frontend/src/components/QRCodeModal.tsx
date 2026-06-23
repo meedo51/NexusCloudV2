@@ -45,143 +45,30 @@ export default function QRCodeModal({ isOpen, onClose, url, title, subtitle, typ
     if (!canvasRef.current || !url) return;
     try {
       const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const size = 280;
 
-      const size = 260;
-      const margin = 16;
-      const totalSize = size + margin * 2;
+      canvas.style.width = `${size}px`;
+      canvas.style.height = `${size}px`;
 
-      canvas.width = totalSize * devicePixelRatio;
-      canvas.height = totalSize * devicePixelRatio;
-      canvas.style.width = `${totalSize}px`;
-      canvas.style.height = `${totalSize}px`;
-      ctx.scale(devicePixelRatio, devicePixelRatio);
-
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = size;
-      tempCanvas.height = size;
-      await QRCode.toCanvas(tempCanvas, url, {
+      // Generate QR code with qrcode library — clean, standard rendering
+      await QRCode.toCanvas(canvas, url, {
         width: size,
-        margin: 0,
-        color: { dark: '#000', light: '#00000000' },
+        margin: 3,
+        color: {
+          dark: '#00F0FF',
+          light: '#0B0E14',
+        },
         errorCorrectionLevel: 'H',
       });
 
-      const srcCtx = tempCanvas.getContext('2d');
-      if (!srcCtx) return;
-      const imageData = srcCtx.getImageData(0, 0, size, size);
-      const data = imageData.data;
-
-      ctx.clearRect(0, 0, totalSize, totalSize);
-
-      // Background
-      ctx.fillStyle = 'transparent';
-
-      // Find QR module size
-      let moduleSize = 0;
-      for (let x = 0; x < size; x++) {
-        const idx = (Math.floor(size / 2) * size + x) * 4;
-        if (data[idx + 3] > 128) { moduleSize = x; break; }
-      }
-      // Find actual module size by scanning first row
-      let firstModule = 0;
-      for (let x = 0; x < size; x++) {
-        if (data[(Math.floor(size / 2) * size + x) * 4 + 3] > 128) {
-          firstModule = x;
-          break;
-        }
-      }
-      // Count modules (QR is always odd: 21, 25, 29, 33, 37, 41, etc)
-      const qrModules = [21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113, 117, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161, 165, 169, 173, 177];
-      let modules = 33; // default guess
-      for (const m of qrModules) {
-        if (size % m === 0) { modules = m; break; }
-      }
-      const cellSize = size / modules;
-
-      // Draw rounded-corner modules
-      const radius = cellSize * 0.35;
-      const gradient = ctx.createLinearGradient(0, 0, size, size);
-      gradient.addColorStop(0, CYAN);
-      gradient.addColorStop(0.5, '#6366F1');
-      gradient.addColorStop(1, PURPLE);
-
-      for (let row = 0; row < modules; row++) {
-        for (let col = 0; col < modules; col++) {
-          const px = Math.floor(col * cellSize + cellSize / 2);
-          const py = Math.floor(row * cellSize + cellSize / 2);
-          const idx = (py * size + px) * 4;
-          if (data[idx + 3] > 128) {
-            const x = margin + col * cellSize;
-            const y = margin + row * cellSize;
-            const s = cellSize * 0.92;
-
-            // Glow
-            ctx.shadowColor = CYAN;
-            ctx.shadowBlur = cellSize * 0.3;
-
-            ctx.beginPath();
-            ctx.roundRect(x + (cellSize - s) / 2, y + (cellSize - s) / 2, s, s, radius);
-            ctx.fillStyle = gradient;
-            ctx.fill();
-
-            // Inner highlight
-            ctx.shadowBlur = 0;
-            ctx.beginPath();
-            ctx.roundRect(x + (cellSize - s * 0.6) / 2, y + (cellSize - s * 0.6) / 2, s * 0.6, s * 0.6, radius * 0.5);
-            ctx.fillStyle = 'rgba(255,255,255,0.08)';
-            ctx.fill();
-          }
-        }
+      // Subtle decorative border overlay
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
       }
 
-      ctx.shadowBlur = 0;
-
-      // Finder patterns (the three large squares) - enhanced
-      const finderPositions = [
-        { row: 0, col: 0 },
-        { row: 0, col: modules - 7 },
-        { row: modules - 7, col: 0 },
-      ];
-
-      for (const fp of finderPositions) {
-        const fx = margin + fp.col * cellSize;
-        const fy = margin + fp.row * cellSize;
-        const fSize = 7 * cellSize;
-
-        // Outer glow
-        ctx.shadowColor = 'rgba(0, 240, 255, 0.3)';
-        ctx.shadowBlur = 20;
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = cellSize * 0.4;
-        ctx.beginPath();
-        ctx.roundRect(fx + cellSize * 0.3, fy + cellSize * 0.3, fSize - cellSize * 0.6, fSize - cellSize * 0.6, cellSize);
-        ctx.stroke();
-
-        // Outer square
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.roundRect(fx + cellSize * 0.3, fy + cellSize * 0.3, fSize - cellSize * 0.6, fSize - cellSize * 0.6, cellSize);
-        ctx.fill();
-
-        // Inner white
-        ctx.fillStyle = DARK;
-        ctx.beginPath();
-        ctx.roundRect(fx + cellSize * 1.3, fy + cellSize * 1.3, fSize - cellSize * 2.6, fSize - cellSize * 2.6, cellSize * 0.6);
-        ctx.fill();
-
-        // Center module
-        ctx.shadowColor = CYAN;
-        ctx.shadowBlur = 15;
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.roundRect(fx + cellSize * 2.5, fy + cellSize * 2.5, cellSize * 2, cellSize * 2, cellSize * 0.5);
-        ctx.fill();
-      }
-
-      ctx.shadowBlur = 0;
       setQrReady(true);
     } catch (err) {
       console.error('QR generation failed:', err);
