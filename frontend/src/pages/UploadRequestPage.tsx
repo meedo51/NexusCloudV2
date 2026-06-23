@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
+import { FiMaximize2 } from 'react-icons/fi';
 import { uploadRequestsApi } from '../services/api';
 import { UploadRequest, FileItem } from '../types';
 import toast from 'react-hot-toast';
+import QRCodeModal from '../components/QRCodeModal';
 
 export default function UploadRequestPage() {
   const [requests, setRequests] = useState<UploadRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [qrTarget, setQrTarget] = useState<{ url: string; title: string; token: string } | null>(null);
   const [folderId, setFolderId] = useState('');
   const [expiresIn, setExpiresIn] = useState(24);
   const [maxSize, setMaxSize] = useState(50);
@@ -115,6 +118,16 @@ export default function UploadRequestPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/request/${req.token}`;
+                      setQrTarget({ url, title: `Upload Request`, token: req.token });
+                    }}
+                    className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-purple transition-colors"
+                    title="Show QR code"
+                  >
+                    <FiMaximize2 size={16} />
+                  </button>
                   <button onClick={() => copyLink(req.token)} className="px-3 py-1.5 bg-cyan/20 text-cyan rounded-xl text-xs hover:bg-cyan/30 transition">Copy Link</button>
                   <button onClick={() => deleteRequest(req.id)} className="px-3 py-1.5 bg-red/20 text-red rounded-xl text-xs hover:bg-red/30 transition">Delete</button>
                 </div>
@@ -123,6 +136,15 @@ export default function UploadRequestPage() {
           )}
         </div>
       )}
+      <QRCodeModal
+        isOpen={!!qrTarget}
+        onClose={() => setQrTarget(null)}
+        url={qrTarget?.url || ''}
+        title={qrTarget?.title || ''}
+        subtitle={`Token: ${qrTarget?.token?.substring(0, 12)}...`}
+        type="upload"
+        meta={qrTarget ? { expiresAt: requests.find(r => `${window.location.origin}/request/${r.token}` === qrTarget.url)?.expiresAt } : undefined}
+      />
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiLink, FiTrash2, FiCopy, FiClock, FiDownload, FiFolder, FiEye, FiUpload } from 'react-icons/fi';
+import { FiLink, FiTrash2, FiCopy, FiClock, FiDownload, FiFolder, FiEye, FiUpload, FiMaximize2 } from 'react-icons/fi';
 import { shareApi } from '../services/api';
 import { ShareLink } from '../types';
 import toast from 'react-hot-toast';
+import QRCodeModal from '../components/QRCodeModal';
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -22,6 +23,7 @@ function formatSize(bytes: number): string {
 export default function ShareManage() {
   const [shares, setShares] = useState<ShareLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const [qrTarget, setQrTarget] = useState<{ url: string; title: string; meta: any } | null>(null);
 
   const loadShares = async () => {
     setLoading(true);
@@ -138,6 +140,20 @@ export default function ShareManage() {
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/s/${share.token}`;
+                      setQrTarget({
+                        url,
+                        title: share.originalName || share.fileName || 'Shared file',
+                        meta: { expiresAt: share.expiresAt, passwordProtected: !!share.passwordHash, downloads: share.downloads, permission: share.permission },
+                      });
+                    }}
+                    className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-purple transition-colors"
+                    title="Show QR code"
+                  >
+                    <FiMaximize2 size={16} />
+                  </button>
+                  <button
                     onClick={() => copyLink(share.token)}
                     className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-cyan transition-colors"
                     title="Copy link"
@@ -157,6 +173,14 @@ export default function ShareManage() {
           ))}
         </div>
       )}
+      <QRCodeModal
+        isOpen={!!qrTarget}
+        onClose={() => setQrTarget(null)}
+        url={qrTarget?.url || ''}
+        title={qrTarget?.title || ''}
+        type="share"
+        meta={qrTarget?.meta}
+      />
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiLink, FiCopy, FiLock, FiClock, FiEye, FiDownload, FiUpload } from 'react-icons/fi';
+import { FiX, FiLink, FiCopy, FiLock, FiClock, FiEye, FiDownload, FiUpload, FiMaximize2 } from 'react-icons/fi';
 import { shareApi } from '../services/api';
 import toast from 'react-hot-toast';
+import QRCodeModal from './QRCodeModal';
 
 interface ShareDialogProps {
   fileId: string;
@@ -24,6 +25,8 @@ export default function ShareDialog({ fileId, fileName, isFolder = false, onClos
   const [allowUpload, setAllowUpload] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [shareToken, setShareToken] = useState('');
 
   const canUpload = permission === 'upload';
 
@@ -33,6 +36,7 @@ export default function ShareDialog({ fileId, fileName, isFolder = false, onClos
       const res = await shareApi.create(fileId, password || undefined, expiresIn, permission, canUpload);
       const url = `${window.location.origin}/s/${res.token}`;
       setShareUrl(url);
+      setShareToken(res.token);
       toast.success('Share link created!');
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Failed to create share link');
@@ -98,6 +102,9 @@ export default function ShareDialog({ fileId, fileName, isFolder = false, onClos
                 />
                 <button onClick={copyLink} className="p-1.5 rounded-lg hover:bg-white/5 text-cyan">
                   <FiCopy size={16} />
+                </button>
+                <button onClick={() => setShowQR(true)} className="p-1.5 rounded-lg hover:bg-white/5 text-purple">
+                  <FiMaximize2 size={16} />
                 </button>
               </div>
               <div className="flex items-center gap-2 text-xs text-white/40">
@@ -186,6 +193,20 @@ export default function ShareDialog({ fileId, fileName, isFolder = false, onClos
           )}
         </motion.div>
       </motion.div>
+
+      <QRCodeModal
+        isOpen={showQR}
+        onClose={() => setShowQR(false)}
+        url={shareUrl}
+        title={fileName}
+        subtitle={`Expires in ${expiresIn} day(s)`}
+        type="share"
+        meta={{
+          expiresAt: new Date(Date.now() + expiresIn * 86400000).toISOString(),
+          passwordProtected: !!password,
+          permission,
+        }}
+      />
     </AnimatePresence>
   );
 }
