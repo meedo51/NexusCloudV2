@@ -77,7 +77,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   pagenumber: 'pageNumber',
   scrollposition: 'scrollPosition',
   readingmode: 'readingMode',
-  sidebaropen: 'sidebarOpen',
+   sidebaropen: 'sidebarOpen',
 };
 
 function toCamelCase(rows: any[]): any[] {
@@ -438,6 +438,32 @@ export async function initializeDatabase(): Promise<void> {
     await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_excel_userId ON docupro_excel_spreadsheets(userId)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_pdf_ann_fileId ON docupro_pdf_annotations(fileId)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_pdf_ann_userId ON docupro_pdf_annotations(userId)');
+
+    // DocuPro storage and file tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS docupro_storage (
+        userId UUID NOT NULL,
+        key VARCHAR(255) NOT NULL,
+        value TEXT NOT NULL DEFAULT '',
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (userId, key)
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS docupro_files (
+        id UUID PRIMARY KEY,
+        userId UUID NOT NULL,
+        name TEXT NOT NULL,
+        app VARCHAR(50) NOT NULL,
+        data JSONB DEFAULT '{}',
+        size INTEGER NOT NULL DEFAULT 0,
+        createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updatedAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_storage_userId ON docupro_storage(userId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_files_userId ON docupro_files(userId)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_files_app ON docupro_files(app)');
 
     // Indexes
     await client.query('CREATE INDEX IF NOT EXISTS idx_files_userId ON files(userId)');

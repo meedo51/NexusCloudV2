@@ -19,10 +19,6 @@ interface QRCodeModalProps {
   };
 }
 
-const CYAN = '#00F0FF';
-const PURPLE = '#A78BFA';
-const DARK = '#0B0E14';
-
 function generateParticles(count: number) {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
@@ -45,29 +41,42 @@ export default function QRCodeModal({ isOpen, onClose, url, title, subtitle, typ
     if (!canvasRef.current || !url) return;
     try {
       const canvas = canvasRef.current;
-      const size = 280;
+      const qrSize = 220;
+      const padding = 18;
+      const totalSize = qrSize + padding * 2;
+      const dpr = devicePixelRatio || 1;
 
-      canvas.style.width = `${size}px`;
-      canvas.style.height = `${size}px`;
+      canvas.width = totalSize * dpr;
+      canvas.height = totalSize * dpr;
+      canvas.style.width = `${totalSize}px`;
+      canvas.style.height = `${totalSize}px`;
 
-      // Generate QR code with qrcode library — clean, standard rendering
-      await QRCode.toCanvas(canvas, url, {
-        width: size,
-        margin: 3,
-        color: {
-          dark: '#00F0FF',
-          light: '#0B0E14',
-        },
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.scale(dpr, dpr);
+
+      // White rounded background card for the QR code
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.roundRect(0, 0, totalSize, totalSize, 14);
+      ctx.fill();
+
+      // Thin shadow border
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(0.5, 0.5, totalSize - 1, totalSize - 1, 14);
+      ctx.stroke();
+
+      // Render QR code to temp canvas and draw onto our DPI-aware canvas
+      const tempCanvas = document.createElement('canvas');
+      await QRCode.toCanvas(tempCanvas, url, {
+        width: qrSize,
+        margin: 0,
+        color: { dark: '#1A1A2E', light: '#FFFFFF' },
         errorCorrectionLevel: 'H',
       });
-
-      // Subtle decorative border overlay
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
-      }
+      ctx.drawImage(tempCanvas, padding, padding, qrSize, qrSize);
 
       setQrReady(true);
     } catch (err) {
@@ -172,6 +181,18 @@ export default function QRCodeModal({ isOpen, onClose, url, title, subtitle, typ
                 }}
               />
 
+              {/* Scan line on the border frame */}
+              <div className="absolute inset-0 rounded-3xl pointer-events-none overflow-hidden">
+                <motion.div
+                  animate={{ top: ['-2%', '102%'] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: 'linear', delay: 0.5 }}
+                  className="absolute left-[2%] right-[2%] h-[1px] opacity-40"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent, rgba(0,240,255,0.5), rgba(167,139,250,0.5), transparent)',
+                  }}
+                />
+              </div>
+
               {/* Inner content */}
               <div className="relative p-6">
                 {/* Header */}
@@ -196,44 +217,37 @@ export default function QRCodeModal({ isOpen, onClose, url, title, subtitle, typ
                   {subtitle && <p className="text-xs text-white/40 mt-0.5 truncate">{subtitle}</p>}
                 </div>
 
-                {/* QR Code canvas with artistic frame */}
+                {/* QR Code */}
                 <div className="relative flex justify-center mb-4">
-                  {/* Outer decorative ring */}
+                  {/* Decorative rotating ring behind QR */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                      className="w-[300px] h-[300px] rounded-full"
+                      transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+                      className="w-[290px] h-[290px] rounded-full"
                       style={{
-                        background: 'conic-gradient(from 0deg, transparent, rgba(0,240,255,0.08), rgba(167,139,250,0.08), transparent)',
+                        background: 'conic-gradient(from 0deg, transparent, rgba(0,240,255,0.06), rgba(167,139,250,0.06), transparent)',
                       }}
                     />
                   </div>
 
-                  {/* QR container with glow */}
-                  <div className="relative z-10 p-3.5 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/[0.06]">
-                    {/* Scan line animation */}
-                    <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
-                      <motion.div
-                        animate={{ top: ['-10%', '110%'] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'linear', delay: 1 }}
-                        className="absolute left-[5%] right-[5%] h-[2px]"
-                        style={{
-                          background: 'linear-gradient(90deg, transparent, rgba(0,240,255,0.6), rgba(167,139,250,0.6), transparent)',
-                          boxShadow: '0 0 12px rgba(0,240,255,0.3)',
-                        }}
-                      />
-                    </div>
+                  {/* QR container */}
+                  <div className="relative z-10">
+                    {/* Corner accent - top-left */}
+                    <div className="absolute -top-1 -left-1 z-20 w-7 h-7 border-t-2 border-l-2 border-cyan/50 rounded-tl-xl" />
+                    {/* Corner accent - top-right */}
+                    <div className="absolute -top-1 -right-1 z-20 w-7 h-7 border-t-2 border-r-2 border-purple/50 rounded-tr-xl" />
+                    {/* Corner accent - bottom-left */}
+                    <div className="absolute -bottom-1 -left-1 z-20 w-7 h-7 border-b-2 border-l-2 border-purple/50 rounded-bl-xl" />
+                    {/* Corner accent - bottom-right */}
+                    <div className="absolute -bottom-1 -right-1 z-20 w-7 h-7 border-b-2 border-r-2 border-cyan/50 rounded-br-xl" />
 
-                    {/* Corner accents */}
-                    <div className="absolute -top-[2px] -left-[2px] w-8 h-8 border-t-2 border-l-2 border-cyan/40 rounded-tl-xl" />
-                    <div className="absolute -top-[2px] -right-[2px] w-8 h-8 border-t-2 border-r-2 border-purple/40 rounded-tr-xl" />
-                    <div className="absolute -bottom-[2px] -left-[2px] w-8 h-8 border-b-2 border-l-2 border-purple/40 rounded-bl-xl" />
-                    <div className="absolute -bottom-[2px] -right-[2px] w-8 h-8 border-b-2 border-r-2 border-cyan/40 rounded-br-xl" />
+                    {/* Subtle glow behind QR */}
+                    <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-cyan/5 via-transparent to-purple/5 blur-xl" />
 
                     <canvas
                       ref={canvasRef}
-                      className={`transition-opacity duration-500 ${qrReady ? 'opacity-100' : 'opacity-0'}`}
+                      className={`relative rounded-xl transition-opacity duration-500 ${qrReady ? 'opacity-100' : 'opacity-0'}`}
                     />
 
                     {!qrReady && (

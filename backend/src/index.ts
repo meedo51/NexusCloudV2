@@ -27,6 +27,8 @@ import adminRoutes from './routes/admin';
 import docuproWordRoutes from './routes/docupro/word';
 import docuproExcelRoutes from './routes/docupro/excel';
 import docuproPdfRoutes from './routes/docupro/pdf';
+import docuproStorageRoutes from './routes/docupro/storage';
+import docuproFileRoutes from './routes/docupro/files';
 import { jobQueue } from './services/queue';
 import { extractText, shouldExtract } from './services/text-extractor';
 
@@ -67,6 +69,8 @@ if (ENABLE_WEBDAV) app.use('/webdav', webdavRoutes);
 app.use('/api/docupro/word', docuproWordRoutes);
 app.use('/api/docupro/excel', docuproExcelRoutes);
 app.use('/api/docupro/pdf', docuproPdfRoutes);
+app.use('/api/docupro/storage', docuproStorageRoutes);
+app.use('/api/docupro/files', docuproFileRoutes);
 
 // Background job: text extraction on file upload
 if (ENABLE_FULLTEXT_SEARCH) {
@@ -131,6 +135,12 @@ setInterval(async () => {
 const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 app.use('/uploads', express.static(uploadDir));
+
+const docuproDir = path.join(__dirname, '../../frontend/public/docupro');
+if (fs.existsSync(docuproDir)) {
+  app.use('/docupro', express.static(docuproDir));
+  console.log('DocuPro static files served from', docuproDir);
+}
 
 app.get('/api/health', (_req, res) => { res.json({ status: 'ok', timestamp: new Date().toISOString() }); });
 

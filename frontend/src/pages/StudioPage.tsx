@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FiFileText, FiCode, FiDatabase, FiImage, FiUsers, FiShield, FiBookOpen, FiEdit3, FiGrid, FiFile } from 'react-icons/fi';
+import { FiFileText, FiCode, FiDatabase, FiImage, FiUsers, FiShield, FiBookOpen, FiEdit3, FiGrid, FiFile, FiLayout } from 'react-icons/fi';
 import { StudioAppCard } from '../components/Navigation';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -21,6 +21,15 @@ const apps = [
     status: 'new',
     color: 'from-purple-500/20 to-cyan-500/20',
     path: '/pdf',
+  },
+  {
+    id: 'docupro-dashboard',
+    name: 'DocuPro Suite',
+    icon: <FiLayout size={24} className="text-indigo-400" />,
+    description: 'Unified dashboard for all DocuPro productivity tools.',
+    status: 'new',
+    color: 'from-indigo-500/20 to-purple-500/20',
+    path: '/studio/docupro-dashboard',
   },
   {
     id: 'docupro-word',
