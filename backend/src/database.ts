@@ -68,10 +68,6 @@ const COLUMN_ALIASES: Record<string, string> = {
   storageschemaversion: 'storageSchemaVersion',
   iscustom: 'isCustom',
   pagecount: 'pageCount',
-  wordcount: 'wordCount',
-  documentid: 'documentId',
-  rowcount: 'rowCount',
-  colcount: 'colCount',
   currentpage: 'currentPage',
   lastreadat: 'lastReadAt',
   pagenumber: 'pageNumber',
@@ -432,12 +428,7 @@ export async function initializeDatabase(): Promise<void> {
       )
     `);
 
-    // DocuPro indexes
-    await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_word_userId ON docupro_word_documents(userId)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_word_versions_docId ON docupro_word_versions(documentId)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_excel_userId ON docupro_excel_spreadsheets(userId)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_pdf_ann_fileId ON docupro_pdf_annotations(fileId)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_docupro_pdf_ann_userId ON docupro_pdf_annotations(userId)');
+    // DocuPro database column aliases
 
     // Indexes
     await client.query('CREATE INDEX IF NOT EXISTS idx_files_userId ON files(userId)');
