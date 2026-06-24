@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FiFileText, FiCode, FiDatabase, FiImage, FiUsers, FiShield, FiBookOpen, FiEdit3, FiGrid, FiFile } from 'react-icons/fi';
+import { FiFileText, FiCode, FiDatabase, FiImage, FiUsers, FiShield, FiBookOpen } from 'react-icons/fi';
 import { StudioAppCard } from '../components/Navigation';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -21,33 +21,6 @@ const apps = [
     status: 'new',
     color: 'from-purple-500/20 to-cyan-500/20',
     path: '/pdf',
-  },
-  {
-    id: 'docupro-word',
-    name: 'Word Studio',
-    icon: <FiEdit3 size={24} className="text-blue-400" />,
-    description: 'Create and edit rich text documents with formatting, outlines, and export options.',
-    status: 'new',
-    color: 'from-blue-500/20 to-indigo-500/20',
-    path: '/studio/docupro-word',
-  },
-  {
-    id: 'docupro-excel',
-    name: 'Excel Studio',
-    icon: <FiGrid size={24} className="text-green-400" />,
-    description: 'Spreadsheet editor with formulas, CSV import, and cell formatting.',
-    status: 'new',
-    color: 'from-green-500/20 to-emerald-500/20',
-    path: '/studio/docupro-excel',
-  },
-  {
-    id: 'docupro-pdf',
-    name: 'PDF Studio',
-    icon: <FiFile size={24} className="text-red-400" />,
-    description: 'Merge PDFs, add annotations, sign documents, and extract text.',
-    status: 'new',
-    color: 'from-red-500/20 to-rose-500/20',
-    path: '/studio/docupro-pdf',
   },
   {
     id: 'nexuscode',
